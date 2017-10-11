@@ -19,7 +19,7 @@ Setup
 
 Download Robinhood Shell by downloading the zip file ([link](https://github.com/anilshanbhag/RobinhoodShell/archive/master.zip)) OR by using git 
 ```
-git clone git@github.com:anilshanbhag/RobinhoodShell.git
+git clone https://github.com/anilshanbhag/RobinhoodShell.git
 ```
 
 Install the dependencies
