@@ -24,7 +24,7 @@ git clone git@github.com:anilshanbhag/RobinhoodShell.git
 
 Install the dependencies
 ```
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 ```
 
 Create and save your username/password in the config file
