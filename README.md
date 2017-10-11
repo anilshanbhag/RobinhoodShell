@@ -2,7 +2,7 @@
 
 Robinhood Shell is a command line shell for trading stocks using Robinhood.
 
-![Robinhood Shell](https://i.imgur.com/8iL5omc.png)
+![Robinhood Shell](https://i.imgur.com/XjrtYXB.png)
 
 Commands Supported
 ------------------ 
