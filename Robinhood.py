@@ -723,7 +723,8 @@ class Robinhood:
             self.endpoints['orders'],
             data=payload
         )
-        res.raise_for_status()
+
+        # res.raise_for_status()
         return res
 
     def place_buy_order(

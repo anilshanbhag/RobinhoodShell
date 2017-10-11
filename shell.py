@@ -38,7 +38,11 @@ class RobinhoodShell(cmd.Cmd):
     def do_l(self, arg):
         'Lists current portfolio'
         portfolio = self.trader.portfolios()
-        print 'Market Value:', portfolio['market_value']
+        print 'Equity Value:', portfolio['equity']
+
+        account_details = self.trader.get_account()
+        if 'margin_balances' in account_details:
+            print 'Buying Power:', account_details['margin_balances']['unallocated_margin_cash']
 
         positions = self.trader.securities_owned()
 
@@ -73,12 +77,18 @@ class RobinhoodShell(cmd.Cmd):
             price = float(parts[2])
 
             stock_instrument = self.trader.instruments(symbol)[0]
-            try:
-                self.trader.place_buy_order(stock_instrument, quantity, price)
-                print "Done"
-            except Exception as e:
+            res = self.trader.place_buy_order(stock_instrument, quantity, price)
+
+            if not (res.status_code == 200 or res.status_code == 201):
                 print "Error executing order"
-                print e
+                try:
+                    data = res.json()
+                    if 'detail' in data:
+                        print data['detail']
+                except:
+                    pass
+            else:
+                print "Done"
         else:
             print "Bad Order"
 
@@ -91,12 +101,18 @@ class RobinhoodShell(cmd.Cmd):
             price = float(parts[2])
 
             stock_instrument = self.trader.instruments(symbol)[0]
-            try:
-                self.trader.place_sell_order(stock_instrument, quantity, price)
-                print "Done"
-            except Exception as e:
+            res = self.trader.place_sell_order(stock_instrument, quantity, price)
+
+            if not (res.status_code == 200 or res.status_code == 201):
                 print "Error executing order"
-                print e
+                try:
+                    data = res.json()
+                    if 'detail' in data:
+                        print data['detail']
+                except:
+                    pass
+            else:
+                print "Done"
         else:
             print "Bad Order"
 
@@ -127,7 +143,7 @@ class RobinhoodShell(cmd.Cmd):
             self.trader.cancel_order(order_id)
             print "Done"
         except Exception as e:
-            print "Error executing order"
+            print "Error executing cancel"
             print e
 
     def do_q(self, arg):
