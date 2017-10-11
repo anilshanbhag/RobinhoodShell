@@ -1,6 +1,6 @@
 # Robinhood Shell
 
-Robinhood Shell is a command line shell for trading stocks using Robinhood.
+Robinhood Shell is a command line shell for trading stocks using [Robinhood](https://robinhood.com/).
 
 ![Robinhood Shell](https://i.imgur.com/XjrtYXB.png)
 
@@ -17,6 +17,8 @@ Commands Supported
 
 Setup
 -----
+
+If you don't have a Robinhood account, sign up for Robinhood. It is a free stock trading platform. Use my [referral link](https://share.robinhood.com/anils31/) to sign up and get one free stock :) 
 
 Download Robinhood Shell by downloading the zip file ([link](https://github.com/anilshanbhag/RobinhoodShell/archive/master.zip)) OR by using git 
 ```
