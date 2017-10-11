@@ -39,6 +39,10 @@ chmod +x shell.py
 ./shell.py
 ```
 
+Credits
+-------
+The shell builds on [Robinhood Python API wrapper](https://github.com/Jamonek/Robinhood) by Jamonek
+
 Disclaimer
 ---------
 Robinhood Shell is not associated with the Robinhood app or endorsed by it. 
