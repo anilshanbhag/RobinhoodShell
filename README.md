@@ -1,6 +1,6 @@
 # Robinhood Shell
 
-Robinhood Shell is a command line shell for trading stocks using Robinhood.
+Robinhood Shell is a command line shell for trading stocks using [Robinhood](https://robinhood.com/).
 
 ![Robinhood Shell](https://i.imgur.com/XjrtYXB.png)
 
@@ -10,12 +10,15 @@ Commands Supported
 * `l` : Lists your current portfolio
 * `b <symbol> <quantity> <price>` : Submits a limit order to buy <quantity> stocks of <symbol> at <price>
 * `s <symbol> <quantity> <price>` : Submits a limit order to sell <quantity> stocks of <symbol> at <price>
+* `q <symbol>` : Get quote (current price) for symbol
 * `o` : Lists all open orders
 * `c <id>` : Cancel an open order identified by <id> [<id> of a open order can be got from output of `o`]
 * `bye` : Exit the shell  
 
 Setup
 -----
+
+If you don't have a Robinhood account, sign up for Robinhood. It is a free stock trading platform. Use my [referral link](https://share.robinhood.com/anils31/) to sign up and get one free stock :) 
 
 Download Robinhood Shell by downloading the zip file ([link](https://github.com/anilshanbhag/RobinhoodShell/archive/master.zip)) OR by using git 
 ```
