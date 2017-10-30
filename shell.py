@@ -65,10 +65,11 @@ class RobinhoodShell(cmd.Cmd):
             buy_price_data[symbol] = position['average_buy_price']
             symbols.append(symbol)
 
-        raw_data = self.trader.quotes_data(symbols)
         quotes_data = {}
-        for quote in raw_data:
-            quotes_data[quote['symbol']] = quote['last_trade_price']
+        if len(symbols) > 0:
+            raw_data = self.trader.quotes_data(symbols)
+            for quote in raw_data:
+                quotes_data[quote['symbol']] = quote['last_trade_price']
 
         table = BeautifulTable()
         table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
@@ -109,10 +110,13 @@ class RobinhoodShell(cmd.Cmd):
     def do_b(self, arg):
         'Buy stock b <symbol> <quantity> <price>'
         parts = arg.split()
-        if len(parts) == 3:
+        if len(parts) >= 2 and len(parts) <= 3:
             symbol = parts[0]
             quantity = parts[1]
-            price = float(parts[2])
+            if len(parts) == 3:
+                price = float(parts[2])
+            else:
+                price = 0.0
 
             stock_instrument = self.trader.instruments(symbol)[0]
             res = self.trader.place_buy_order(stock_instrument, quantity, price)

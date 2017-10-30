@@ -742,7 +742,10 @@ class Robinhood:
             (:obj:`requests.request`): result from `orders` put command
         """
         transaction = Transaction.BUY
-        return self.place_order(instrument, quantity, bid_price, transaction)
+        order = 'limit'
+        if bid_price == 0.0:
+            order = 'market'
+        return self.place_order(instrument, quantity, bid_price, transaction, order=order)
 
     def place_sell_order(
             self,
@@ -759,7 +762,27 @@ class Robinhood:
             (:obj:`requests.request`): result from `orders` put command
         """
         transaction = Transaction.SELL
-        return self.place_order(instrument, quantity, bid_price, transaction)
+        order = 'limit'
+        if bid_price == 0.0:
+            order = 'market'
+        return self.place_order(instrument, quantity, bid_price, transaction, order=order)
+
+    def place_stop_loss_order(
+            self,
+            instrument,
+            quantity,
+            bid_price=0.0
+    ):
+        """wrapper for placing sell orders
+        Args:
+            instrument (dict): the RH URL and symbol in dict for the instrument to be traded
+            quantity (int): quantity of stocks in order
+            bid_price (float): price for order
+        Returns:
+            (:obj:`requests.request`): result from `orders` put command
+        """
+        transaction = Transaction.SELL
+        return self.place_order(instrument, quantity, bid_price, transaction, trigger='stop')
 
     ##############################
     #GET OPEN ORDER(S)
