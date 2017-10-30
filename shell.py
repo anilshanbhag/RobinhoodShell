@@ -59,8 +59,10 @@ class RobinhoodShell(cmd.Cmd):
         positions = self.trader.securities_owned()
 
         symbols = []
+        buy_price_data = {}
         for position in positions['results']:
             symbol = self.get_symbol(position['instrument'])
+            buy_price_data[symbol] = position['average_buy_price']
             symbols.append(symbol)
 
         raw_data = self.trader.quotes_data(symbols)
@@ -69,14 +71,16 @@ class RobinhoodShell(cmd.Cmd):
             quotes_data[quote['symbol']] = quote['last_trade_price']
 
         table = BeautifulTable()
-        table.column_headers = ["symbol", "current price", "quantity", "total equity"]
+        table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
 
         for position in positions['results']:
             quantity = int(float(position['quantity']))
             symbol = self.get_symbol(position['instrument'])
             price = quotes_data[symbol]
             total_equity = float(price) * quantity
-            table.append_row([symbol, price, quantity, total_equity])
+            buy_price = float(buy_price_data[symbol])
+            p_l = total_equity - buy_price * quantity
+            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l])
 
         print(table)
 
