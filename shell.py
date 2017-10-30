@@ -21,16 +21,28 @@ class RobinhoodShell(cmd.Cmd):
     # Maps URL to Symbol
     instruments_reverse_cache = {}
 
+    # Cache file used to store instrument cache
+    watchlist_file = 'watchlist.data'
+
+    # List of stocks in watchlist
+    watchlist = []
+
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.trader = Robinhood()
         self.trader.login(username=USERNAME, password=PASSWORD)
 
         try:
-            data = open('instruments.data').read()
+            data = open(self.instruments_cache_file).read()
             self.instruments_cache = json.loads(data)
             for k in self.instruments_cache:
                 self.instruments_reverse_cache[self.instruments_cache[k]] = k
+        except:
+            pass
+
+        try:
+            data = open(self.watchlist_file).read()
+            self.watchlist = json.loads(data)
         except:
             pass
 
@@ -68,6 +80,28 @@ class RobinhoodShell(cmd.Cmd):
 
         print(table)
 
+    def do_w(self, arg):
+        'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
+        parts = arg.split()
+        if len(parts) == 2:
+            if parts[0] == 'a':
+                self.watchlist.append(parts[1].strip())
+            if parts[0] == 'r':
+                self.watchlist = [r for r in self.watchlist if not r == parts[1].strip()]
+            print "Done"
+        else:
+            table = BeautifulTable()
+            table.column_headers = ["symbol", "current price"]
+
+            if len(self.watchlist) > 0:
+                raw_data = self.trader.quotes_data(self.watchlist)
+                quotes_data = {}
+                for quote in raw_data:
+                    table.append_row([quote['symbol'], quote['last_trade_price']])
+                print(table)
+            else:
+                print "Watchlist empty!"
+
     def do_b(self, arg):
         'Buy stock b <symbol> <quantity> <price>'
         parts = arg.split()
@@ -93,7 +127,34 @@ class RobinhoodShell(cmd.Cmd):
             print "Bad Order"
 
     def do_s(self, arg):
-        'Sell stock s <symbol> <quantity> <price>'
+        'Sell stock s <symbol> <quantity> <?price>'
+        parts = arg.split()
+        if len(parts) >= 2 and len(parts) <= 3:
+            symbol = parts[0]
+            quantity = parts[1]
+            if len(parts) == 3:
+                price = float(parts[2])
+            else:
+                price = 0.0
+
+            stock_instrument = self.trader.instruments(symbol)[0]
+            res = self.trader.place_sell_order(stock_instrument, quantity, price)
+
+            if not (res.status_code == 200 or res.status_code == 201):
+                print "Error executing order"
+                try:
+                    data = res.json()
+                    if 'detail' in data:
+                        print data['detail']
+                except:
+                    pass
+            else:
+                print "Done"
+        else:
+            print "Bad Order"
+
+    def do_sl(self, arg):
+        'Setup stop loss on stock sl <symbol> <quantity> <price>'
         parts = arg.split()
         if len(parts) == 3:
             symbol = parts[0]
@@ -101,7 +162,7 @@ class RobinhoodShell(cmd.Cmd):
             price = float(parts[2])
 
             stock_instrument = self.trader.instruments(symbol)[0]
-            res = self.trader.place_sell_order(stock_instrument, quantity, price)
+            res = self.trader.place_stop_loss_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
                 print "Error executing order"
@@ -121,30 +182,58 @@ class RobinhoodShell(cmd.Cmd):
         open_orders = self.trader.get_open_orders()
         if open_orders:
             table = BeautifulTable()
-            table.column_headers = ["symbol", "price", "quantity", "type", "id"]
+            table.column_headers = ["index", "symbol", "price", "quantity", "type", "id"]
 
+            index = 1
             for order in open_orders:
                 table.append_row([
+                    index,
                     self.get_symbol(order['instrument']),
                     order['price'],
                     int(float(order['quantity'])),
                     order['side'],
                     order['id'],
                 ])
+                index += 1
 
             print(table)
         else:
             print "No Open Orders"
 
     def do_c(self, arg):
-        'Cancel open order c <id>'
+        'Cancel open order c <index> or c <id>'
         order_id = arg.strip()
+        order_index = -1
+        try:
+            order_index = int(order_id)
+        except:
+            pass
+
+        if order_index > 0:
+            order_index = order_index - 1
+            open_orders = self.trader.get_open_orders()
+            if order_index < len(open_orders):
+                order_id = open_orders[order_index]['id']
+            else:
+                print "Bad index"
+                return
+
         try:
             self.trader.cancel_order(order_id)
             print "Done"
         except Exception as e:
             print "Error executing cancel"
             print e
+
+    def do_ca(self, arg):
+        'Cancel all open orders'
+        open_orders = self.trader.get_open_orders()
+        for order in open_orders:
+            try:
+                self.trader.cancel_order(order['id'])
+            except Exception as e:
+                pass
+        print "Done"
 
     def do_q(self, arg):
         'Get quote for stock q <symbol>'
@@ -156,6 +245,7 @@ class RobinhoodShell(cmd.Cmd):
 
     def do_bye(self, arg):
         open(self.instruments_cache_file, 'w').write(json.dumps(self.instruments_cache))
+        open(self.watchlist_file, 'w').write(json.dumps(self.watchlist))
         return True
 
     # ------ utils --------
