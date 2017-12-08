@@ -194,12 +194,20 @@ class RobinhoodShell(cmd.Cmd):
 
             index = 1
             for order in open_orders:
+
+                if order['trigger'] == 'stop':
+                    order_price = order['stop_price']
+                    order_type  = "stop loss"
+                else:
+                    order_price = order['price']
+                    order_type  = order['side']+" "+order['type']
+
                 table.append_row([
                     index,
                     self.get_symbol(order['instrument']),
-                    order['price'],
+                    order_price,
                     int(float(order['quantity'])),
-                    order['side'],
+                    order_type,
                     order['id'],
                 ])
                 index += 1
