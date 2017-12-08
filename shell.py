@@ -69,19 +69,23 @@ class RobinhoodShell(cmd.Cmd):
         if len(symbols) > 0:
             raw_data = self.trader.quotes_data(symbols)
             for quote in raw_data:
-                quotes_data[quote['symbol']] = quote['last_trade_price']
+                quotes_data[quote['symbol']] = quote
+
+
 
         table = BeautifulTable()
-        table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
+        table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l" , "day change", "day %"]
 
         for position in positions['results']:
             quantity = int(float(position['quantity']))
             symbol = self.get_symbol(position['instrument'])
-            price = quotes_data[symbol]
+            price = quotes_data[symbol]['last_trade_price']
             total_equity = float(price) * quantity
             buy_price = float(buy_price_data[symbol])
             p_l = total_equity - buy_price * quantity
-            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l])
+            day_change = float(quotes_data[symbol]['last_trade_price']) - float(quotes_data[symbol]['previous_close'])
+            day_change_pct = ( day_change / float(quotes_data[symbol]['previous_close']) ) * 100
+            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l, day_change,day_change_pct])
 
         print(table)
 
