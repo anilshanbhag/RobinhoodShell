@@ -74,7 +74,12 @@ class RobinhoodShell(cmd.Cmd):
 
 
         table = BeautifulTable()
-        table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l" , "day change", "day %"]
+        table.top_border_char = '='
+        table.bottom_border_char = '='
+        table.header_seperator_char = '='
+        table.column_seperator_char = ':'
+
+        table.column_headers = ["symbol", "current price", "qty", "total equity", "cost basis", "p/l" , "day change", "day %"]
 
         for position in positions['results']:
             quantity = int(float(position['quantity']))
@@ -194,6 +199,11 @@ class RobinhoodShell(cmd.Cmd):
         open_orders = self.trader.get_open_orders()
         if open_orders:
             table = BeautifulTable()
+            table.top_border_char = '='
+            table.bottom_border_char = '='
+            table.header_seperator_char = '='
+            table.column_seperator_char = ':'
+
             table.column_headers = ["index", "symbol", "price", "quantity", "type", "id"]
 
             index = 1
