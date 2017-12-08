@@ -197,9 +197,9 @@ class Robinhood:
         """
         url = None
         if stock.find(',') == -1:
-            url = str(self.endpoints['quotes']) + str(stock) + "/"
+            url = str(self.endpoints['quotes']) + str(stock.upper()) + "/"
         else:
-            url = str(self.endpoints['quotes']) + "?symbols=" + str(stock)
+            url = str(self.endpoints['quotes']) + "?symbols=" + str(stock.upper())
         #Check for validity of symbol
         try:
             req = requests.get(url)
@@ -219,13 +219,13 @@ class Robinhood:
             (:obj:`list` of :obj:`dict`): List of JSON contents from `quotes` endpoint, in the
             same order of input args. If any ticker is invalid, a None will occur at that position.
         """
-        url = str(self.endpoints['quotes']) + "?symbols=" + ",".join(stocks)
+        url = str(self.endpoints['quotes']) + "?symbols=" + ",".join(stocks).upper()
         try:
             req = requests.get(url)
             req.raise_for_status()
             data = req.json()
         except requests.exceptions.HTTPError:
-            raise NameError('Invalid Symbols: ' + ",".join(stocks)) #TODO: custom exception
+            raise NameError('Invalid Symbols: ' + ",".join(stocks)).upper() #TODO: custom exception
 
         return data["results"]
 
@@ -249,7 +249,7 @@ class Robinhood:
         #Prompt for stock if not entered
         if not stock:   #pragma: no cover
             stock = input("Symbol: ")
-        data = self.quote_data(stock)
+        data = self.quote_data(stock.upper())
         res = []
         # Handles the case of multple tickers
         if stock.find(',') != -1:
@@ -263,7 +263,7 @@ class Robinhood:
 
     def get_quote(self, stock=''):
         """wrapper for quote_data"""
-        data = self.quote_data(stock)
+        data = self.quote_data(stock.upper())
         return data["symbol"]
 
     def get_historical_quotes(
