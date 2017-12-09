@@ -18,11 +18,14 @@ Commands Supported
 Setup
 -----
 
-If you don't have a Robinhood account, sign up for Robinhood. It is a free stock trading platform. Use my [referral link](https://share.robinhood.com/anils31/) to sign up and get one free stock :) 
+If you don't have a Robinhood account, sign up for Robinhood. It is a free stock trading platform. Use my [referral link](https://share.robinhood.com/brianp668/) to sign up and get one free stock :) 
 
-Download Robinhood Shell by downloading the zip file ([link](https://github.com/anilshanbhag/RobinhoodShell/archive/master.zip)) OR by using git 
+Download Robinhood Shell by downloading the zip file ([link](https://github.com/ploch/RobinhoodShell/archive/dev.zip)) OR by using git 
 ```
-git clone https://github.com/anilshanbhag/RobinhoodShell.git
+git clone https://github.com/ploch/RobinhoodShell.git
+
+cd RobinhoodShell
+git checkout dev
 ```
 
 Install the dependencies
