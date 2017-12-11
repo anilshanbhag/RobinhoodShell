@@ -105,13 +105,19 @@ class RobinhoodShell(cmd.Cmd):
             print "Done"
         else:
             table = BeautifulTable()
-            table.column_headers = ["symbol", "current price"]
+            table.top_border_char = '='
+            table.bottom_border_char = '='
+            table.header_seperator_char = '='
+            table.column_seperator_char = ':'
+            table.column_headers = ["symbol", "current price", "open","today", "%"]
 
             if len(self.watchlist) > 0:
                 raw_data = self.trader.quotes_data(self.watchlist)
                 quotes_data = {}
                 for quote in raw_data:
-                    table.append_row([quote['symbol'], quote['last_trade_price']])
+                    day_change = float(quote['last_trade_price']) - float(quote['previous_close'])
+                    day_change_pct = ( day_change / float(quote['previous_close']) ) * 100
+                    table.append_row([quote['symbol'], quote['last_trade_price'], quote['previous_close'], day_change,day_change_pct])
                 print(table)
             else:
                 print "Watchlist empty!"
