@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import cmd, json, re
+import pprint
 from Robinhood import Robinhood
 from beautifultable import BeautifulTable
 from config import USERNAME, PASSWORD
@@ -273,9 +274,10 @@ class RobinhoodShell(cmd.Cmd):
 
     def do_q(self, arg):
         'Get detailed quote for stock: q <symblol(s)>'
+
         symbols = re.split('\W+',arg)
 
-        if len(symbols[0]) == 0:
+        if len(arg) == 0:
             print "Missing symbol(s)"
         else:
             raw_data = self.trader.quotes_data(symbols)
