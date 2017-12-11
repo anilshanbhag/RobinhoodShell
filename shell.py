@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import cmd, json
+import cmd, json, re
 from Robinhood import Robinhood
 from beautifultable import BeautifulTable
 from config import USERNAME, PASSWORD
@@ -272,7 +272,31 @@ class RobinhoodShell(cmd.Cmd):
         print "Done"
 
     def do_q(self, arg):
-        'Get quote for stock q <symbol>'
+        'Get detailed quote for stock: q <symblol(s)>'
+        symbols = re.split('\W+',arg)
+
+        if len(symbols[0]) == 0:
+            print "Missing symbol(s)"
+        else:
+            raw_data = self.trader.quotes_data(symbols)
+            quotes_data = {}
+
+            table = BeautifulTable()
+            table.top_border_char = '='
+            table.bottom_border_char = '='
+            table.header_seperator_char = '='
+            table.column_seperator_char = ':'
+            table.column_headers = ["symbol", "current price", "open","today", "%"]
+            for quote in raw_data:
+                if not quote:
+                    continue
+                day_change = float(quote['last_trade_price']) - float(quote['previous_close'])
+                day_change_pct = ( day_change / float(quote['previous_close']) ) * 100
+                table.append_row([quote['symbol'], quote['last_trade_price'], quote['previous_close'], day_change,day_change_pct])
+            print(table)
+
+    def do_qq(self, arg):
+        'Get quick quote for stock: qq <symbol>'
         symbol = arg.strip()
         try:
             self.trader.print_quote(symbol)
