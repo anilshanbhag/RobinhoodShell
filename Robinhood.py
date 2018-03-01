@@ -860,3 +860,33 @@ class Robinhood:
             cancelled_orders.append(order)
 
         return cancelled_orders
+
+    ##############################
+    #WATCHLIST(S)
+    ##############################
+    def get_watchlists(self):
+        return self.session.get(self.endpoints['watchlists']).json()
+
+    def get_watchlist_instruments(self, watchlist_name):
+        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()        
+
+    def add_instrument_to_watchlist(self, watchlist_name, stock):
+        pass
+
+    def delete_instrument_from_watchlist(self, watchlist_name, stock):
+        pass
+
+    def reorder_watchlist(self):
+        pass
+
+    def create_watchlist(self, name):
+        payload = { 
+            'name': 'Technology'
+        }
+        res = self.session.post(
+            self.endpoints['watchlists'],
+            data=payload
+        )
+        res.raise_for_status()
+        data = res.json()
+        return data

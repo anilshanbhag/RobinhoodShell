@@ -118,7 +118,11 @@ class RobinhoodShell(cmd.Cmd):
             else:
                 price = 0.0
 
-            stock_instrument = self.trader.instruments(symbol)[0]
+            stock_instrument = self.get_instrument(symbol)
+            if not stock_instrument['url']:
+                print "Stock not found"
+                return
+
             res = self.trader.place_buy_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
@@ -145,7 +149,11 @@ class RobinhoodShell(cmd.Cmd):
             else:
                 price = 0.0
 
-            stock_instrument = self.trader.instruments(symbol)[0]
+            stock_instrument = self.get_instrument(symbol)
+            if not stock_instrument['url']:
+                print "Stock not found"
+                return
+
             res = self.trader.place_sell_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
@@ -263,9 +271,24 @@ class RobinhoodShell(cmd.Cmd):
 
         return self.instruments_reverse_cache[url]
 
+    def get_instrument(self, symbol):
+        if not symbol in self.instruments_cache:
+            instruments = self.trader.instruments(symbol)
+            for instrument in instruments:
+                self.add_instrument(instrument['url'], instrument['symbol'])
+
+        url = ''
+        if symbol in self.instruments_cache:
+            url = self.instruments_cache[symbol]
+
+        return { 'symbol': symbol, 'url': url }
+
     def add_instrument_from_url(self, url):
         data = self.trader.get_url(url)
         symbol = data['symbol']
+        self.add_instrument(url, symbol)
+
+    def add_instrument(self, url, symbol):
         self.instruments_cache[symbol] = url
         self.instruments_reverse_cache[url] = symbol
 
