@@ -56,14 +56,9 @@ class RobinhoodShell(cmd.Cmd):
         if 'margin_balances' in account_details:
             print 'Buying Power:', account_details['margin_balances']['unallocated_margin_cash']
 
+        # Load Stocks
         positions = self.trader.securities_owned()
-
-        symbols = []
-        buy_price_data = {}
-        for position in positions['results']:
-            symbol = self.get_symbol(position['instrument'])
-            buy_price_data[symbol] = position['average_buy_price']
-            symbols.append(symbol)
+        symbols = [self.get_symbol(position['instrument']) for position in positions['results']]
 
         quotes_data = {}
         if len(symbols) > 0:
@@ -79,11 +74,31 @@ class RobinhoodShell(cmd.Cmd):
             symbol = self.get_symbol(position['instrument'])
             price = quotes_data[symbol]
             total_equity = float(price) * quantity
-            buy_price = float(buy_price_data[symbol])
+            buy_price = float(position['average_buy_price'])
             p_l = total_equity - buy_price * quantity
             table.append_row([symbol, price, quantity, total_equity, buy_price, p_l])
 
+
+        print "Stocks:"
         print(table)
+
+        # Load Options
+        options_positions = self.trader.options_owned()
+
+        if len(options_positions['results']) > 0:
+            options_table = BeautifulTable()
+            options_table.column_headers = ["symbol", "quantity", "cost basis"]
+            # options_table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
+
+            for position in options_positions['results']:
+                quantity = int(float(position['quantity']))
+                symbol = self.get_symbol(position['option'])
+                buy_price = float(position['average_price'])
+                # total_equity = float(price) * quantity
+                options_table.append_row([symbol, quantity, buy_price])
+
+            print "Options:"
+            print(options_table)
 
     def do_w(self, arg):
         'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
@@ -285,7 +300,11 @@ class RobinhoodShell(cmd.Cmd):
 
     def add_instrument_from_url(self, url):
         data = self.trader.get_url(url)
-        symbol = data['symbol']
+        if 'symbol' in data:
+            symbol = data['symbol']
+        else:
+            types = { 'call': 'C', 'put': 'P'}
+            symbol = data['chain_symbol'] + ' ' + data['expiration_date'] + ' ' + ''.join(types[data['type']].split('-')) + ' ' + str(float(data['strike_price']))
         self.add_instrument(url, symbol)
 
     def add_instrument(self, url, symbol):

@@ -40,6 +40,7 @@ class Robinhood:
         "margin_upgrades": "https://api.robinhood.com/margin/upgrades/",
         "markets": "https://api.robinhood.com/markets/",
         "notifications": "https://api.robinhood.com/notifications/",
+        "options_positions": "https://api.robinhood.com/options/positions/",
         "orders": "https://api.robinhood.com/orders/",
         "password_reset": "https://api.robinhood.com/password_reset/request/",
         "portfolios": "https://api.robinhood.com/portfolios/",
@@ -664,6 +665,18 @@ class Robinhood:
         than zero shares in user's portfolio.
         """
         return self.session.get(self.endpoints['positions']+'?nonzero=true').json()
+
+    def options_owned(self):
+        """
+        Returns list of options which are in user's portfolio
+        """
+        data = self.session.get(self.endpoints['options_positions']+'?nonzero=true').json()
+        if 'results' in data:
+            results = data['results']
+            results = [result for result in results if int(float(result['quantity'])) != 0]
+            data['results'] = results
+
+        return data
 
     ##############################
     #PLACE ORDER
