@@ -46,11 +46,22 @@ class RobinhoodShell(cmd.Cmd):
         except:
             pass
 
+    # nytime = parser.parse('2018-06-15T23:14:15Z').astimezone(to_zone)
+    # from dateutil import parser
+
     # ----- basic commands -----
     def do_l(self, arg):
         'Lists current portfolio'
         portfolio = self.trader.portfolios()
-        print 'Equity Value:', portfolio['equity']
+        if portfolio['extended_hours_equity']:
+            equity =  float(portfolio['extended_hours_equity'])
+        else:
+            equity =  float(portfolio['equity'])
+
+        print 'Equity Value: %.2f' % equity
+        previous_close = float(portfolio['adjusted_equity_previous_close'])
+        change = equity - previous_close
+        print '%s%.2f Today (%.2f%%)' % (('+' if change > 0 else ''), change, change/previous_close * 100.0)
 
         account_details = self.trader.get_account()
         if 'margin_balances' in account_details:
@@ -64,7 +75,11 @@ class RobinhoodShell(cmd.Cmd):
         if len(symbols) > 0:
             raw_data = self.trader.quotes_data(symbols)
             for quote in raw_data:
-                quotes_data[quote['symbol']] = quote['last_trade_price']
+                if quote['last_extended_hours_trade_price']:
+                    price = quote['last_extended_hours_trade_price']
+                else:
+                    price = quote['last_trade_price']
+                quotes_data[quote['symbol']] = price
 
         table = BeautifulTable()
         table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
