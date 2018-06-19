@@ -4,7 +4,6 @@ import cmd, json
 from Robinhood import Robinhood
 from beautifultable import BeautifulTable
 from config import USERNAME, PASSWORD
-import datetime, time
 
 class RobinhoodShell(cmd.Cmd):
     intro = 'Welcome to the Robinhood shell. Type help or ? to list commands.\n'
@@ -282,8 +281,6 @@ class RobinhoodShell(cmd.Cmd):
             expiration_date = option_data['expiration_date']
             strike = float(option_data['strike_price'])
             type = option_data['type']
-            exp = time.mktime(datetime.datetime.strptime(expiration_date, "%Y-%m-%d").timetuple())
-            exp -= (3600*4)
             opInfo = self.trader.getOptionInfo(instrument)
             last_price = float(opInfo[0]['last_trade_price'])
             total_equity = (100 * last_price) * float(quantity)
