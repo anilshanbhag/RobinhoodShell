@@ -284,18 +284,13 @@ class RobinhoodShell(cmd.Cmd):
             type = option_data['type']
             exp = time.mktime(datetime.datetime.strptime(expiration_date, "%Y-%m-%d").timetuple())
             exp -= (3600*4)
-            opInfoUrl = "https://query1.finance.yahoo.com/v7/finance/options/" + symbol + "?date=" + str(int(exp))
-            opInfo = self.trader.session.get(opInfoUrl).json()
-            optionList = opInfo['optionChain']['result'][0]['options'][0][type + 's']
-            last_price = 0
-            for option in optionList:
-                if float(option['strike']) == strike:
-                    last_price = option['lastPrice']
-                    break
+            opInfo = self.trader.getOptionInfo(instrument)
+            last_price = float(opInfo[0]['last_trade_price'])
             total_equity = (100 * last_price) * float(quantity)
             change = (float(cost) * float(quantity)) - total_equity
             table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
         print table
+
 
     def do_q(self, arg):
         'Get quote for stock q <symbol>'
