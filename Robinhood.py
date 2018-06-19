@@ -52,6 +52,7 @@ class Robinhood:
         "watchlists": "https://api.robinhood.com/watchlists/",
         "news": "https://api.robinhood.com/midlands/news/",
         "fundamentals": "https://api.robinhood.com/fundamentals/",
+        "options": "https://api.robinhood.com/options/"
     }
 
     session = None
@@ -881,7 +882,7 @@ class Robinhood:
         return self.session.get(self.endpoints['watchlists']).json()
 
     def get_watchlist_instruments(self, watchlist_name):
-        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()        
+        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()
 
     def add_instrument_to_watchlist(self, watchlist_name, stock):
         pass
@@ -893,7 +894,7 @@ class Robinhood:
         pass
 
     def create_watchlist(self, name):
-        payload = { 
+        payload = {
             'name': 'Technology'
         }
         res = self.session.post(
@@ -903,3 +904,12 @@ class Robinhood:
         res.raise_for_status()
         data = res.json()
         return data
+
+    ##############################
+    # GET OPTIONS POSITIONS
+    ##############################
+
+    def getHeldOptions(self):
+        options = self.session.get(self.endpoints['options'] + "positions/?nonzero=true").json()
+        options = options['results']
+        return options

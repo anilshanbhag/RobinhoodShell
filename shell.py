@@ -4,6 +4,7 @@ import cmd, json
 from Robinhood import Robinhood
 from beautifultable import BeautifulTable
 from config import USERNAME, PASSWORD
+import datetime, time
 
 class RobinhoodShell(cmd.Cmd):
     intro = 'Welcome to the Robinhood shell. Type help or ? to list commands.\n'
@@ -96,24 +97,8 @@ class RobinhoodShell(cmd.Cmd):
 
         print "Stocks:"
         print(table)
-
-        # Load Options
-        options_positions = self.trader.options_owned()
-
-        if len(options_positions['results']) > 0:
-            options_table = BeautifulTable()
-            options_table.column_headers = ["symbol", "quantity", "cost basis"]
-            # options_table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
-
-            for position in options_positions['results']:
-                quantity = int(float(position['quantity']))
-                symbol = self.get_symbol(position['option'])
-                buy_price = float(position['average_price'])
-                # total_equity = float(price) * quantity
-                options_table.append_row([symbol, quantity, buy_price])
-
-            print "Options:"
-            print(options_table)
+        print "Options:"
+        self.do_options(None)
 
     def do_w(self, arg):
         'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
@@ -280,6 +265,37 @@ class RobinhoodShell(cmd.Cmd):
             except Exception as e:
                 pass
         print "Done"
+
+    def do_options(self, arg):
+        'Gets options positions'
+        option_positions = self.trader.getHeldOptions()
+        table = BeautifulTable()
+        table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l", "type", "expiry"]
+        for op in option_positions:
+            quantity = op['quantity']
+            if float(quantity) == 0:
+                continue
+            cost = op['average_price']
+            symbol = op['chain_symbol']
+            instrument = op['option']
+            option_data = self.trader.session.get(instrument).json()
+            expiration_date = option_data['expiration_date']
+            strike = float(option_data['strike_price'])
+            type = option_data['type']
+            exp = time.mktime(datetime.datetime.strptime(expiration_date, "%Y-%m-%d").timetuple())
+            exp -= (3600*4)
+            opInfoUrl = "https://query1.finance.yahoo.com/v7/finance/options/" + symbol + "?date=" + str(int(exp))
+            opInfo = self.trader.session.get(opInfoUrl).json()
+            optionList = opInfo['optionChain']['result'][0]['options'][0][type + 's']
+            last_price = 0
+            for option in optionList:
+                if float(option['strike']) == strike:
+                    last_price = option['lastPrice']
+                    break
+            total_equity = (100 * last_price) * float(quantity)
+            change = (float(cost) * float(quantity)) - total_equity
+            table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
+        print table
 
     def do_q(self, arg):
         'Get quote for stock q <symbol>'
