@@ -284,7 +284,7 @@ class RobinhoodShell(cmd.Cmd):
             opInfo = self.trader.getOptionInfo(instrument)
             last_price = float(opInfo[0]['last_trade_price'])
             total_equity = (100 * last_price) * float(quantity)
-            change = (float(cost) * float(quantity)) - total_equity
+            change = total_equity - (float(cost) * float(quantity))
             table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
         print table
 
