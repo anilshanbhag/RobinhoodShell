@@ -102,10 +102,15 @@ class RobinhoodShell(cmd.Cmd):
         table.column_headers = ["symbol", "price", "quantity", "equity", "cost basis", "p/l", "type", "expiry"]
 
         for op in option_positions:
-            quantity = op['quantity']
-            if float(quantity) == 0:
+            quantity = float(op['quantity'])
+            if quantity == 0:
                 continue
-            cost = op['average_price']
+
+            cost = float(op['average_price'])
+            if op['type'] == 'short':
+                quantity = -quantity
+                cost = -cost
+
             symbol = op['chain_symbol']
             instrument = op['option']
             option_data = self.trader.session.get(instrument).json()
@@ -113,9 +118,9 @@ class RobinhoodShell(cmd.Cmd):
             strike = float(option_data['strike_price'])
             type = option_data['type']
             info = self.trader.get_option_info(instrument)
-            last_price = float(info[0]['last_trade_price'])
-            total_equity = (100 * last_price) * float(quantity)
-            change = total_equity - (float(cost) * float(quantity))
+            last_price = float(info[0]['adjusted_mark_price'])
+            total_equity = (100 * last_price) * quantity
+            change = total_equity - (float(cost) * quantity)
             table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
 
         print "Options:"
