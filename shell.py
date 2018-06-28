@@ -294,7 +294,18 @@ class RobinhoodShell(cmd.Cmd):
 
     def do_q(self, arg):
         'Get quote for stock q <symbol>'
-        symbol = arg.strip()
+        arg = arg.strip().split()
+        symbol = arg[0];
+        type = strike = expiry = None
+        if len(arg) > 1:
+            try:
+                type = arg[1]
+                strike = arg[2]
+                expiry = arg[3]
+            except Exception as e:
+                print "Please check arguments again. Format: "
+                print "q <symbol> <call/put> <strike> <YYYY-mm-dd>"
+
         try:
             self.trader.print_quote(symbol)
         except:
