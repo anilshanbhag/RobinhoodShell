@@ -674,18 +674,6 @@ class Robinhood:
         """
         return self.session.get(self.endpoints['positions']+'?nonzero=true').json()
 
-    def options_owned(self):
-        """
-        Returns list of options which are in user's portfolio
-        """
-        data = self.session.get(self.endpoints['options_positions']+'?nonzero=true').json()
-        if 'results' in data:
-            results = data['results']
-            results = [result for result in results if int(float(result['quantity'])) != 0]
-            data['results'] = results
-
-        return data
-
     ##############################
     #PLACE ORDER
     ##############################
@@ -885,6 +873,7 @@ class Robinhood:
     ##############################
     #WATCHLIST(S)
     ##############################
+
     def get_watchlists(self):
         return self.session.get(self.endpoints['watchlists']).json()
 
@@ -916,11 +905,11 @@ class Robinhood:
     # GET OPTIONS POSITIONS
     ##############################
 
-    def getHeldOptions(self):
+    def options_owned(self):
         options = self.session.get(self.endpoints['options'] + "positions/?nonzero=true").json()
         options = options['results']
         return options
 
-    def getOptionInfo(self, instrument):
-        opInfo = self.session.get(self.endpoints['marketdata'] + "options/?instruments=" + instrument).json()
-        return opInfo['results']
+    def get_option_info(self, instrument):
+        info = self.session.get(self.endpoints['marketdata'] + "options/?instruments=" + instrument).json()
+        return info['results']
