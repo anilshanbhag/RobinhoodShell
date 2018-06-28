@@ -93,27 +93,33 @@ class RobinhoodShell(cmd.Cmd):
             p_l = total_equity - buy_price * quantity
             table.append_row([symbol, price, quantity, total_equity, buy_price, p_l])
 
-
         print "Stocks:"
         print(table)
 
         # Load Options
-        options_positions = self.trader.options_owned()
+        option_positions = self.trader.options_owned()
+        table = BeautifulTable()
+        table.column_headers = ["symbol", "price", "quantity", "equity", "cost basis", "p/l", "type", "expiry"]
 
-        if len(options_positions['results']) > 0:
-            options_table = BeautifulTable()
-            options_table.column_headers = ["symbol", "quantity", "cost basis"]
-            # options_table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
+        for op in option_positions:
+            quantity = op['quantity']
+            if float(quantity) == 0:
+                continue
+            cost = op['average_price']
+            symbol = op['chain_symbol']
+            instrument = op['option']
+            option_data = self.trader.session.get(instrument).json()
+            expiration_date = option_data['expiration_date']
+            strike = float(option_data['strike_price'])
+            type = option_data['type']
+            info = self.trader.get_option_info(instrument)
+            last_price = float(info[0]['last_trade_price'])
+            total_equity = (100 * last_price) * float(quantity)
+            change = total_equity - (float(cost) * float(quantity))
+            table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
 
-            for position in options_positions['results']:
-                quantity = int(float(position['quantity']))
-                symbol = self.get_symbol(position['option'])
-                buy_price = float(position['average_price'])
-                # total_equity = float(price) * quantity
-                options_table.append_row([symbol, quantity, buy_price])
-
-            print "Options:"
-            print(options_table)
+        print "Options:"
+        print(table)
 
     def do_w(self, arg):
         'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'

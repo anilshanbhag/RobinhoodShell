@@ -26,7 +26,7 @@ class Transaction(Enum):
 class Robinhood:
     """wrapper class for fetching/parsing Robinhood endpoints"""
     endpoints = {
-        "login": "https://api.robinhood.com/api-token-auth/",
+        "login": "https://api.robinhood.com/oauth2/token/",
         "logout": "https://api.robinhood.com/api-token-logout/",
         "investment_profile": "https://api.robinhood.com/user/investment_profile/",
         "accounts": "https://api.robinhood.com/accounts/",
@@ -52,6 +52,8 @@ class Robinhood:
         "watchlists": "https://api.robinhood.com/watchlists/",
         "news": "https://api.robinhood.com/midlands/news/",
         "fundamentals": "https://api.robinhood.com/fundamentals/",
+        "options": "https://api.robinhood.com/options/",
+        "marketdata": "https://api.robinhood.com/marketdata/"
     }
 
     session = None
@@ -81,7 +83,8 @@ class Robinhood:
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
             "X-Robinhood-API-Version": "1.0.0",
             "Connection": "keep-alive",
-            "User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)"
+            "User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)",
+            "Origin": "https://robinhood.com"
         }
         self.session.headers = self.headers
 
@@ -111,7 +114,11 @@ class Robinhood:
         self.password = password
         payload = {
             'password': self.password,
-            'username': self.username
+            'username': self.username,
+            'scope': 'internal',
+            'grant_type': 'password',
+            'client_id': 'c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS',
+            'expires_in': 86400
         }
 
         if mfa_code:
@@ -125,14 +132,15 @@ class Robinhood:
             res.raise_for_status()
             data = res.json()
         except requests.exceptions.HTTPError:
+
             raise RH_exception.LoginFailed()
 
         if 'mfa_required' in data.keys():           #pragma: no cover
             raise RH_exception.TwoFactorRequired()  #requires a second call to enable 2FA
 
-        if 'token' in data.keys():
-            self.auth_token = data['token']
-            self.headers['Authorization'] = 'Token ' + self.auth_token
+        if 'access_token' in data.keys():
+            self.auth_token = data['access_token']
+            self.headers['Authorization'] = 'Bearer ' + self.auth_token
             return True
 
         return False
@@ -666,18 +674,6 @@ class Robinhood:
         """
         return self.session.get(self.endpoints['positions']+'?nonzero=true').json()
 
-    def options_owned(self):
-        """
-        Returns list of options which are in user's portfolio
-        """
-        data = self.session.get(self.endpoints['options_positions']+'?nonzero=true').json()
-        if 'results' in data:
-            results = data['results']
-            results = [result for result in results if int(float(result['quantity'])) != 0]
-            data['results'] = results
-
-        return data
-
     ##############################
     #PLACE ORDER
     ##############################
@@ -877,11 +873,12 @@ class Robinhood:
     ##############################
     #WATCHLIST(S)
     ##############################
+
     def get_watchlists(self):
         return self.session.get(self.endpoints['watchlists']).json()
 
     def get_watchlist_instruments(self, watchlist_name):
-        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()        
+        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()
 
     def add_instrument_to_watchlist(self, watchlist_name, stock):
         pass
@@ -893,7 +890,7 @@ class Robinhood:
         pass
 
     def create_watchlist(self, name):
-        payload = { 
+        payload = {
             'name': 'Technology'
         }
         res = self.session.post(
@@ -903,3 +900,16 @@ class Robinhood:
         res.raise_for_status()
         data = res.json()
         return data
+
+    ##############################
+    # GET OPTIONS POSITIONS
+    ##############################
+
+    def options_owned(self):
+        options = self.session.get(self.endpoints['options'] + "positions/?nonzero=true").json()
+        options = options['results']
+        return options
+
+    def get_option_info(self, instrument):
+        info = self.session.get(self.endpoints['marketdata'] + "options/?instruments=" + instrument).json()
+        return info['results']
