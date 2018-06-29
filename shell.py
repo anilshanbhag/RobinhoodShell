@@ -117,8 +117,8 @@ class RobinhoodShell(cmd.Cmd):
             expiration_date = option_data['expiration_date']
             strike = float(option_data['strike_price'])
             type = option_data['type']
-            info = self.trader.get_option_info(instrument)
-            last_price = float(info[0]['adjusted_mark_price'])
+            info = self.trader.get_option_marketdata(instrument)
+            last_price = float(info['adjusted_mark_price'])
             total_equity = (100 * last_price) * quantity
             change = total_equity - (float(cost) * quantity)
             table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
@@ -295,21 +295,36 @@ class RobinhoodShell(cmd.Cmd):
     def do_q(self, arg):
         'Get quote for stock q <symbol>'
         arg = arg.strip().split()
-        symbol = arg[0];
+        try:
+            symbol = arg[0];
+        except:
+            print "Please check arguments again. Format: "
+            print "Stock: q <symbol>"
+            print "Option: q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
         type = strike = expiry = None
         if len(arg) > 1:
             try:
                 type = arg[1]
                 strike = arg[2]
-                expiry = arg[3]
             except Exception as e:
                 print "Please check arguments again. Format: "
-                print "q <symbol> <call/put> <strike> <YYYY-mm-dd>"
-
-        try:
-            self.trader.print_quote(symbol)
-        except:
-            print "Error getting quote for:", symbol
+                print "q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+            try:
+                expiry = arg[3]
+            except:
+                expiry = None
+            arg_dict = {'symbol': symbol, 'type': type, 'expiration_dates': expiry, 'strike_price': strike, 'state': 'active', 'tradability': 'tradable'};
+            quotes = self.trader.get_option_quote(arg_dict);
+            table = BeautifulTable();
+            table.column_headers = ['expiry', 'price']
+            for row in quotes:
+                table.append_row(row)
+            print table
+        else:
+            try:
+                self.trader.print_quote(symbol)
+            except:
+                print "Error getting quote for:", symbol
 
     def do_bye(self, arg):
         open(self.instruments_cache_file, 'w').write(json.dumps(self.instruments_cache))

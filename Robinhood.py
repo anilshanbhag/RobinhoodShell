@@ -910,6 +910,32 @@ class Robinhood:
         options = options['results']
         return options
 
-    def get_option_info(self, instrument):
+    def get_option_marketdata(self, instrument):
         info = self.session.get(self.endpoints['marketdata'] + "options/?instruments=" + instrument).json()
-        return info['results']
+        return info['results'][0]
+
+    def get_option_chainid(self, symbol):
+        stock_info = self.session.get(self.endpoints['instruments'] + "?symbol=" + symbol).json()
+        stock_id = stock_info['results'][0]['id']
+        params = {}
+        params['equity_instrument_ids'] = stock_id
+        chains = self.session.get(self.endpoints['options'] + "chains/", params = params).json()
+        chains = chains['results']
+        chain_id = None
+        for chain in chains:
+            if chain['can_open_position'] == True:
+                chain_id = chain['id']
+        return chain_id
+
+    def get_option_quote(self, arg_dict):
+        chain_id = self.get_option_chainid(arg_dict.pop('symbol', None))
+        arg_dict['chain_id'] = chain_id
+        option_info = self.session.get(self.endpoints['options'] + "instruments/", params = arg_dict).json()
+        option_info = option_info['results']
+        exp_price_list = []
+        for op in option_info:
+            mrkt_data = self.get_option_marketdata(op['url'])
+            op_price = mrkt_data['adjusted_mark_price']
+            exp = op['expiration_date']
+            exp_price_list.append((exp, op_price))
+        return exp_price_list
