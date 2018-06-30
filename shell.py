@@ -293,7 +293,7 @@ class RobinhoodShell(cmd.Cmd):
         print "Done"
 
     def do_q(self, arg):
-        'Get quote for stock q <symbol>'
+        'Get quote for stock q <symbol> or option q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>'
         arg = arg.strip().split()
         try:
             symbol = arg[0];
@@ -309,16 +309,20 @@ class RobinhoodShell(cmd.Cmd):
             except Exception as e:
                 print "Please check arguments again. Format: "
                 print "q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+
             try:
                 expiry = arg[3]
             except:
                 expiry = None
+
             arg_dict = {'symbol': symbol, 'type': type, 'expiration_dates': expiry, 'strike_price': strike, 'state': 'active', 'tradability': 'tradable'};
             quotes = self.trader.get_option_quote(arg_dict);
             table = BeautifulTable();
             table.column_headers = ['expiry', 'price']
+
             for row in quotes:
                 table.append_row(row)
+
             print table
         else:
             try:

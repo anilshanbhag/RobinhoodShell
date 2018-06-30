@@ -922,9 +922,11 @@ class Robinhood:
         chains = self.session.get(self.endpoints['options'] + "chains/", params = params).json()
         chains = chains['results']
         chain_id = None
+
         for chain in chains:
             if chain['can_open_position'] == True:
                 chain_id = chain['id']
+        
         return chain_id
 
     def get_option_quote(self, arg_dict):
@@ -933,9 +935,13 @@ class Robinhood:
         option_info = self.session.get(self.endpoints['options'] + "instruments/", params = arg_dict).json()
         option_info = option_info['results']
         exp_price_list = []
+        
         for op in option_info:
             mrkt_data = self.get_option_marketdata(op['url'])
             op_price = mrkt_data['adjusted_mark_price']
             exp = op['expiration_date']
             exp_price_list.append((exp, op_price))
+
+        exp_price_list.sort()
+
         return exp_price_list
