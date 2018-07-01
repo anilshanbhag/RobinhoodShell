@@ -99,7 +99,7 @@ class RobinhoodShell(cmd.Cmd):
         # Load Options
         option_positions = self.trader.options_owned()
         table = BeautifulTable()
-        table.column_headers = ["symbol", "price", "quantity", "equity", "cost basis", "p/l", "type", "expiry"]
+        table.column_headers = ["option", "price", "quantity", "equity", "cost basis", "p/l"]
 
         for op in option_positions:
             quantity = float(op['quantity'])
@@ -111,17 +111,17 @@ class RobinhoodShell(cmd.Cmd):
                 quantity = -quantity
                 cost = -cost
 
-            symbol = op['chain_symbol']
             instrument = op['option']
             option_data = self.trader.session.get(instrument).json()
             expiration_date = option_data['expiration_date']
             strike = float(option_data['strike_price'])
             type = option_data['type']
+            symbol = op['chain_symbol'] + ' ' + expiration_date + ' ' + type + ' $' + str(strike)
             info = self.trader.get_option_marketdata(instrument)
             last_price = float(info['adjusted_mark_price'])
             total_equity = (100 * last_price) * quantity
             change = total_equity - (float(cost) * quantity)
-            table.append_row([symbol, last_price, quantity, total_equity, cost, change, type, expiration_date])
+            table.append_row([symbol, last_price, quantity, total_equity, cost, change])
 
         print "Options:"
         print(table)
@@ -243,12 +243,20 @@ class RobinhoodShell(cmd.Cmd):
 
             index = 1
             for order in open_orders:
+
+                if order['trigger'] == 'stop':
+                    order_price = order['stop_price']
+                    order_type  = "stop loss"
+                else:
+                    order_price = order['price']
+                    order_type  = order['side']+" "+order['type']
+
                 table.append_row([
                     index,
                     self.get_symbol(order['instrument']),
-                    order['price'],
+                    order_price,
                     int(float(order['quantity'])),
-                    order['side'],
+                    order_type,
                     order['id'],
                 ])
                 index += 1

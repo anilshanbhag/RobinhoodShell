@@ -16,12 +16,10 @@ class Bounds(Enum):
     REGULAR = 'regular'
     EXTENDED = 'extended'
 
-
 class Transaction(Enum):
     """enum for buy/sell orders"""
     BUY = 'buy'
     SELL = 'sell'
-
 
 class Robinhood:
     """wrapper class for fetching/parsing Robinhood endpoints"""
@@ -37,6 +35,7 @@ class Robinhood:
         "dividends": "https://api.robinhood.com/dividends/",
         "edocuments": "https://api.robinhood.com/documents/",
         "instruments": "https://api.robinhood.com/instruments/",
+        "instruments_popularity": "https://api.robinhood.com/instruments/popularity/",
         "margin_upgrades": "https://api.robinhood.com/margin/upgrades/",
         "markets": "https://api.robinhood.com/markets/",
         "notifications": "https://api.robinhood.com/notifications/",
@@ -51,6 +50,7 @@ class Robinhood:
         "user": "https://api.robinhood.com/user/",
         "watchlists": "https://api.robinhood.com/watchlists/",
         "news": "https://api.robinhood.com/midlands/news/",
+        "ratings": "https://api.robinhood.com/midlands/ratings/",
         "fundamentals": "https://api.robinhood.com/fundamentals/",
         "options": "https://api.robinhood.com/options/",
         "marketdata": "https://api.robinhood.com/marketdata/"
@@ -197,6 +197,26 @@ class Robinhood:
 
         return res['results']
 
+    def instruments_popularity(self, ids):
+        """ fetch instruments popularity endpoint
+
+        Args:
+            instruments (list): list of instrument ids
+
+        Returns:
+            (:obj:`dict`): JSON contents from `instruments_popularity` endpoint
+
+        """
+        url = str(self.endpoints['instruments_popularity']) + "?ids=" + '%2C'.join(ids)
+        try:
+            req = requests.get(url)
+            req.raise_for_status()
+            data = req.json()
+        except requests.exceptions.HTTPError:
+            raise NameError('Invalid Instruments')
+
+        return data
+
     def quote_data(self, stock=''):
         """fetch stock quote
         Args:
@@ -206,9 +226,9 @@ class Robinhood:
         """
         url = None
         if stock.find(',') == -1:
-            url = str(self.endpoints['quotes']) + str(stock) + "/"
+            url = str(self.endpoints['quotes']) + str(stock.upper()) + "/"
         else:
-            url = str(self.endpoints['quotes']) + "?symbols=" + str(stock)
+            url = str(self.endpoints['quotes']) + "?symbols=" + str(stock.upper())
         #Check for validity of symbol
         try:
             req = requests.get(url)
@@ -228,13 +248,13 @@ class Robinhood:
             (:obj:`list` of :obj:`dict`): List of JSON contents from `quotes` endpoint, in the
             same order of input args. If any ticker is invalid, a None will occur at that position.
         """
-        url = str(self.endpoints['quotes']) + "?symbols=" + ",".join(stocks)
+        url = str(self.endpoints['quotes']) + "?symbols=" + ",".join(stocks).upper()
         try:
             req = requests.get(url)
             req.raise_for_status()
             data = req.json()
         except requests.exceptions.HTTPError:
-            raise NameError('Invalid Symbols: ' + ",".join(stocks)) #TODO: custom exception
+            raise NameError('Invalid Symbols: ' + ",".join(stocks)).upper() #TODO: custom exception
 
         return data["results"]
 
@@ -258,7 +278,7 @@ class Robinhood:
         #Prompt for stock if not entered
         if not stock:   #pragma: no cover
             stock = input("Symbol: ")
-        data = self.quote_data(stock)
+        data = self.quote_data(stock.upper())
         res = []
         # Handles the case of multple tickers
         if stock.find(',') != -1:
