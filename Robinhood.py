@@ -748,6 +748,9 @@ class Robinhood:
         #    transaction,
         #    instrument['symbol']
         #)
+        if trigger == 'stop':
+          payload['stop_price'] = float(bid_price)
+
         res = self.session.post(
             self.endpoints['orders'],
             data=payload
@@ -946,7 +949,7 @@ class Robinhood:
         for chain in chains:
             if chain['can_open_position'] == True:
                 chain_id = chain['id']
-        
+
         return chain_id
 
     def get_option_quote(self, arg_dict):
@@ -955,7 +958,7 @@ class Robinhood:
         option_info = self.session.get(self.endpoints['options'] + "instruments/", params = arg_dict).json()
         option_info = option_info['results']
         exp_price_list = []
-        
+
         for op in option_info:
             mrkt_data = self.get_option_marketdata(op['url'])
             op_price = mrkt_data['adjusted_mark_price']
