@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import cmd, json, re
+import cmd, json, re, math
 import pprint
 from Robinhood import Robinhood
 from beautifultable import BeautifulTable
@@ -80,7 +80,7 @@ class RobinhoodShell(cmd.Cmd):
         table.header_seperator_char = '='
         table.column_seperator_char = ':'
 
-        table.column_headers = ["symbol", "current price", "qty", "total equity", "cost basis", "p/l" , "day change", "day %"]
+        table.column_headers = ["symbol", "current price", "qty", "total equity", "cost basis", "p/l" , "day change", "val change", "day %"]
 
         for position in positions['results']:
             quantity = int(float(position['quantity']))
@@ -90,8 +90,9 @@ class RobinhoodShell(cmd.Cmd):
             buy_price = float(buy_price_data[symbol])
             p_l = total_equity - buy_price * quantity
             day_change = float(quotes_data[symbol]['last_trade_price']) - float(quotes_data[symbol]['previous_close'])
-            day_change_pct = ( day_change / float(quotes_data[symbol]['previous_close']) ) * 100
-            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l, day_change,day_change_pct])
+            day_change_q_val = '{:04.2f}'.format(quantity * day_change)
+            day_change_pct = '{:04.2f}'.format(float( ( day_change / float(quotes_data[symbol]['previous_close']) ) * 100))
+            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l, day_change,day_change_q_val,day_change_pct])
 
         print(table)
 
@@ -271,6 +272,47 @@ class RobinhoodShell(cmd.Cmd):
             except Exception as e:
                 pass
         print "Done"
+
+    def do_mp(self, arg):
+        'Buy as many shares possible by defined max dollar amount:  mp <symbol> <max_spend> <?price_limit>'
+        parts = arg.split()
+        if len(parts) >= 2 and len(parts) <= 3:
+            symbol = parts[0]
+            #quantity = parts[1]
+            spend = parts[1]
+            if len(parts) == 3:
+                print "Parts: 3"
+                price_limit = float(parts[2])
+            else:
+                price_limit = 0.0
+
+            try:
+                cur_data = self.trader.quote_data(symbol)
+                last_price = cur_data['last_trade_price']
+            except:
+                print "Invalid Ticker?"
+                pass
+                return
+
+            # quote['last_trade_price']
+            quantity = int(math.floor(float(spend) / float(last_price)))
+            print("\nBuying %s\n Max Spend: %s\nQTY: %s\n Current Price: %s\nMax Price: %s\n" % (symbol,spend, quantity, last_price, price_limit))
+
+   #         stock_instrument = self.trader.instruments(symbol)[0]
+   #         res = self.trader.place_buy_order(stock_instrument, quantity, price)
+
+   #         if not (res.status_code == 200 or res.status_code == 201):
+   #             print "Error executing order"
+   #             try:
+   #                 data = res.json()
+   #                 if 'detail' in data:
+   #                     print data['detail']
+   #             except:
+   #                 pass
+   #         else:
+   #             print "Done"
+   #     else:
+   #         print "Bad Order"
 
     def do_q(self, arg):
         'Get detailed quote for stock: q <symblol(s)>'
