@@ -81,7 +81,6 @@ class RobinhoodShell(cmd.Cmd):
                     price = quote['last_extended_hours_trade_price']
                 else:
                     price = quote['last_trade_price']
-                quotes_data[quote['symbol']] = price
 
         table = BeautifulTable()
         table.top_border_char = '='
