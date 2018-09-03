@@ -16,17 +16,15 @@ class Bounds(Enum):
     REGULAR = 'regular'
     EXTENDED = 'extended'
 
-
 class Transaction(Enum):
     """enum for buy/sell orders"""
     BUY = 'buy'
     SELL = 'sell'
 
-
 class Robinhood:
     """wrapper class for fetching/parsing Robinhood endpoints"""
     endpoints = {
-        "login": "https://api.robinhood.com/api-token-auth/",
+        "login": "https://api.robinhood.com/oauth2/token/",
         "logout": "https://api.robinhood.com/api-token-logout/",
         "investment_profile": "https://api.robinhood.com/user/investment_profile/",
         "accounts": "https://api.robinhood.com/accounts/",
@@ -37,9 +35,11 @@ class Robinhood:
         "dividends": "https://api.robinhood.com/dividends/",
         "edocuments": "https://api.robinhood.com/documents/",
         "instruments": "https://api.robinhood.com/instruments/",
+        "instruments_popularity": "https://api.robinhood.com/instruments/popularity/",
         "margin_upgrades": "https://api.robinhood.com/margin/upgrades/",
         "markets": "https://api.robinhood.com/markets/",
         "notifications": "https://api.robinhood.com/notifications/",
+        "options_positions": "https://api.robinhood.com/options/positions/",
         "orders": "https://api.robinhood.com/orders/",
         "password_reset": "https://api.robinhood.com/password_reset/request/",
         "portfolios": "https://api.robinhood.com/portfolios/",
@@ -50,7 +50,10 @@ class Robinhood:
         "user": "https://api.robinhood.com/user/",
         "watchlists": "https://api.robinhood.com/watchlists/",
         "news": "https://api.robinhood.com/midlands/news/",
+        "ratings": "https://api.robinhood.com/midlands/ratings/",
         "fundamentals": "https://api.robinhood.com/fundamentals/",
+        "options": "https://api.robinhood.com/options/",
+        "marketdata": "https://api.robinhood.com/marketdata/"
     }
 
     session = None
@@ -80,7 +83,8 @@ class Robinhood:
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
             "X-Robinhood-API-Version": "1.0.0",
             "Connection": "keep-alive",
-            "User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)"
+            "User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)",
+            "Origin": "https://robinhood.com"
         }
         self.session.headers = self.headers
 
@@ -110,7 +114,11 @@ class Robinhood:
         self.password = password
         payload = {
             'password': self.password,
-            'username': self.username
+            'username': self.username,
+            'scope': 'internal',
+            'grant_type': 'password',
+            'client_id': 'c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS',
+            'expires_in': 86400
         }
 
         if mfa_code:
@@ -124,14 +132,15 @@ class Robinhood:
             res.raise_for_status()
             data = res.json()
         except requests.exceptions.HTTPError:
+
             raise RH_exception.LoginFailed()
 
         if 'mfa_required' in data.keys():           #pragma: no cover
             raise RH_exception.TwoFactorRequired()  #requires a second call to enable 2FA
 
-        if 'token' in data.keys():
-            self.auth_token = data['token']
-            self.headers['Authorization'] = 'Token ' + self.auth_token
+        if 'access_token' in data.keys():
+            self.auth_token = data['access_token']
+            self.headers['Authorization'] = 'Bearer ' + self.auth_token
             return True
 
         return False
@@ -187,6 +196,26 @@ class Robinhood:
             return res
 
         return res['results']
+
+    def instruments_popularity(self, ids):
+        """ fetch instruments popularity endpoint
+
+        Args:
+            instruments (list): list of instrument ids
+
+        Returns:
+            (:obj:`dict`): JSON contents from `instruments_popularity` endpoint
+
+        """
+        url = str(self.endpoints['instruments_popularity']) + "?ids=" + '%2C'.join(ids)
+        try:
+            req = requests.get(url)
+            req.raise_for_status()
+            data = req.json()
+        except requests.exceptions.HTTPError:
+            raise NameError('Invalid Instruments')
+
+        return data
 
     def quote_data(self, stock=''):
         """fetch stock quote
@@ -719,6 +748,9 @@ class Robinhood:
         #    transaction,
         #    instrument['symbol']
         #)
+        if trigger == 'stop':
+          payload['stop_price'] = float(bid_price)
+
         res = self.session.post(
             self.endpoints['orders'],
             data=payload
@@ -860,3 +892,79 @@ class Robinhood:
             cancelled_orders.append(order)
 
         return cancelled_orders
+
+    ##############################
+    #WATCHLIST(S)
+    ##############################
+
+    def get_watchlists(self):
+        return self.session.get(self.endpoints['watchlists']).json()
+
+    def get_watchlist_instruments(self, watchlist_name):
+        return self.session.get(self.endpoints['watchlists'] + watchlist_name + '/').json()
+
+    def add_instrument_to_watchlist(self, watchlist_name, stock):
+        pass
+
+    def delete_instrument_from_watchlist(self, watchlist_name, stock):
+        pass
+
+    def reorder_watchlist(self):
+        pass
+
+    def create_watchlist(self, name):
+        payload = {
+            'name': 'Technology'
+        }
+        res = self.session.post(
+            self.endpoints['watchlists'],
+            data=payload
+        )
+        res.raise_for_status()
+        data = res.json()
+        return data
+
+    ##############################
+    # GET OPTIONS POSITIONS
+    ##############################
+
+    def options_owned(self):
+        options = self.session.get(self.endpoints['options'] + "positions/?nonzero=true").json()
+        options = options['results']
+        return options
+
+    def get_option_marketdata(self, instrument):
+        info = self.session.get(self.endpoints['marketdata'] + "options/?instruments=" + instrument).json()
+        return info['results'][0]
+
+    def get_option_chainid(self, symbol):
+        stock_info = self.session.get(self.endpoints['instruments'] + "?symbol=" + symbol).json()
+        stock_id = stock_info['results'][0]['id']
+        params = {}
+        params['equity_instrument_ids'] = stock_id
+        chains = self.session.get(self.endpoints['options'] + "chains/", params = params).json()
+        chains = chains['results']
+        chain_id = None
+
+        for chain in chains:
+            if chain['can_open_position'] == True:
+                chain_id = chain['id']
+
+        return chain_id
+
+    def get_option_quote(self, arg_dict):
+        chain_id = self.get_option_chainid(arg_dict.pop('symbol', None))
+        arg_dict['chain_id'] = chain_id
+        option_info = self.session.get(self.endpoints['options'] + "instruments/", params = arg_dict).json()
+        option_info = option_info['results']
+        exp_price_list = []
+
+        for op in option_info:
+            mrkt_data = self.get_option_marketdata(op['url'])
+            op_price = mrkt_data['adjusted_mark_price']
+            exp = op['expiration_date']
+            exp_price_list.append((exp, op_price))
+
+        exp_price_list.sort()
+
+        return exp_price_list
