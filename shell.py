@@ -46,30 +46,40 @@ class RobinhoodShell(cmd.Cmd):
         except:
             pass
 
+    # nytime = parser.parse('2018-06-15T23:14:15Z').astimezone(to_zone)
+    # from dateutil import parser
+
     # ----- basic commands -----
     def do_l(self, arg):
         'Lists current portfolio'
         portfolio = self.trader.portfolios()
-        print 'Equity Value:', portfolio['equity']
+        if portfolio['extended_hours_equity']:
+            equity =  float(portfolio['extended_hours_equity'])
+        else:
+            equity =  float(portfolio['equity'])
+
+        print 'Equity Value: %.2f' % equity
+        previous_close = float(portfolio['adjusted_equity_previous_close'])
+        change = equity - previous_close
+        print '%s%.2f Today (%.2f%%)' % (('+' if change > 0 else ''), change, change/previous_close * 100.0)
 
         account_details = self.trader.get_account()
         if 'margin_balances' in account_details:
             print 'Buying Power:', account_details['margin_balances']['unallocated_margin_cash']
 
+        # Load Stocks
         positions = self.trader.securities_owned()
-
-        symbols = []
-        buy_price_data = {}
-        for position in positions['results']:
-            symbol = self.get_symbol(position['instrument'])
-            buy_price_data[symbol] = position['average_buy_price']
-            symbols.append(symbol)
+        symbols = [self.get_symbol(position['instrument']) for position in positions['results']]
 
         quotes_data = {}
         if len(symbols) > 0:
             raw_data = self.trader.quotes_data(symbols)
             for quote in raw_data:
-                quotes_data[quote['symbol']] = quote['last_trade_price']
+                if quote['last_extended_hours_trade_price']:
+                    price = quote['last_extended_hours_trade_price']
+                else:
+                    price = quote['last_trade_price']
+                quotes_data[quote['symbol']] = price
 
         table = BeautifulTable()
         table.column_headers = ["symbol", "current price", "quantity", "total equity", "cost basis", "p/l"]
@@ -79,10 +89,41 @@ class RobinhoodShell(cmd.Cmd):
             symbol = self.get_symbol(position['instrument'])
             price = quotes_data[symbol]
             total_equity = float(price) * quantity
-            buy_price = float(buy_price_data[symbol])
+            buy_price = float(position['average_buy_price'])
             p_l = total_equity - buy_price * quantity
             table.append_row([symbol, price, quantity, total_equity, buy_price, p_l])
 
+        print "Stocks:"
+        print(table)
+
+        # Load Options
+        option_positions = self.trader.options_owned()
+        table = BeautifulTable()
+        table.column_headers = ["option", "price", "quantity", "equity", "cost basis", "p/l"]
+
+        for op in option_positions:
+            quantity = float(op['quantity'])
+            if quantity == 0:
+                continue
+
+            cost = float(op['average_price'])
+            if op['type'] == 'short':
+                quantity = -quantity
+                cost = -cost
+
+            instrument = op['option']
+            option_data = self.trader.session.get(instrument).json()
+            expiration_date = option_data['expiration_date']
+            strike = float(option_data['strike_price'])
+            type = option_data['type']
+            symbol = op['chain_symbol'] + ' ' + expiration_date + ' ' + type + ' $' + str(strike)
+            info = self.trader.get_option_marketdata(instrument)
+            last_price = float(info['adjusted_mark_price'])
+            total_equity = (100 * last_price) * quantity
+            change = total_equity - (float(cost) * quantity)
+            table.append_row([symbol, last_price, quantity, total_equity, cost, change])
+
+        print "Options:"
         print(table)
 
     def do_w(self, arg):
@@ -118,7 +159,11 @@ class RobinhoodShell(cmd.Cmd):
             else:
                 price = 0.0
 
-            stock_instrument = self.trader.instruments(symbol)[0]
+            stock_instrument = self.get_instrument(symbol)
+            if not stock_instrument['url']:
+                print "Stock not found"
+                return
+
             res = self.trader.place_buy_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
@@ -145,7 +190,11 @@ class RobinhoodShell(cmd.Cmd):
             else:
                 price = 0.0
 
-            stock_instrument = self.trader.instruments(symbol)[0]
+            stock_instrument = self.get_instrument(symbol)
+            if not stock_instrument['url']:
+                print "Stock not found"
+                return
+
             res = self.trader.place_sell_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
@@ -194,12 +243,20 @@ class RobinhoodShell(cmd.Cmd):
 
             index = 1
             for order in open_orders:
+
+                if order['trigger'] == 'stop':
+                    order_price = order['stop_price']
+                    order_type  = "stop loss"
+                else:
+                    order_price = order['price']
+                    order_type  = order['side']+" "+order['type']
+
                 table.append_row([
                     index,
                     self.get_symbol(order['instrument']),
-                    order['price'],
+                    order_price,
                     int(float(order['quantity'])),
-                    order['side'],
+                    order_type,
                     order['id'],
                 ])
                 index += 1
@@ -244,12 +301,42 @@ class RobinhoodShell(cmd.Cmd):
         print "Done"
 
     def do_q(self, arg):
-        'Get quote for stock q <symbol>'
-        symbol = arg.strip()
+        'Get quote for stock q <symbol> or option q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>'
+        arg = arg.strip().split()
         try:
-            self.trader.print_quote(symbol)
+            symbol = arg[0];
         except:
-            print "Error getting quote for:", symbol
+            print "Please check arguments again. Format: "
+            print "Stock: q <symbol>"
+            print "Option: q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+        type = strike = expiry = None
+        if len(arg) > 1:
+            try:
+                type = arg[1]
+                strike = arg[2]
+            except Exception as e:
+                print "Please check arguments again. Format: "
+                print "q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+
+            try:
+                expiry = arg[3]
+            except:
+                expiry = None
+
+            arg_dict = {'symbol': symbol, 'type': type, 'expiration_dates': expiry, 'strike_price': strike, 'state': 'active', 'tradability': 'tradable'};
+            quotes = self.trader.get_option_quote(arg_dict);
+            table = BeautifulTable();
+            table.column_headers = ['expiry', 'price']
+
+            for row in quotes:
+                table.append_row(row)
+
+            print table
+        else:
+            try:
+                self.trader.print_quote(symbol)
+            except:
+                print "Error getting quote for:", symbol
 
     def do_bye(self, arg):
         open(self.instruments_cache_file, 'w').write(json.dumps(self.instruments_cache))
@@ -263,9 +350,28 @@ class RobinhoodShell(cmd.Cmd):
 
         return self.instruments_reverse_cache[url]
 
+    def get_instrument(self, symbol):
+        if not symbol in self.instruments_cache:
+            instruments = self.trader.instruments(symbol)
+            for instrument in instruments:
+                self.add_instrument(instrument['url'], instrument['symbol'])
+
+        url = ''
+        if symbol in self.instruments_cache:
+            url = self.instruments_cache[symbol]
+
+        return { 'symbol': symbol, 'url': url }
+
     def add_instrument_from_url(self, url):
         data = self.trader.get_url(url)
-        symbol = data['symbol']
+        if 'symbol' in data:
+            symbol = data['symbol']
+        else:
+            types = { 'call': 'C', 'put': 'P'}
+            symbol = data['chain_symbol'] + ' ' + data['expiration_date'] + ' ' + ''.join(types[data['type']].split('-')) + ' ' + str(float(data['strike_price']))
+        self.add_instrument(url, symbol)
+
+    def add_instrument(self, url, symbol):
         self.instruments_cache[symbol] = url
         self.instruments_reverse_cache[url] = symbol
 
