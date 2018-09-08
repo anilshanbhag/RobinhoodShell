@@ -105,6 +105,8 @@ class RobinhoodShell(cmd.Cmd):
         print "Stocks:"
         print(table)
 
+    def do_lo(self, arg):
+        'Lists current options portfolio'
         # Load Options
         option_positions = self.trader.options_owned()
         table = BeautifulTable()
