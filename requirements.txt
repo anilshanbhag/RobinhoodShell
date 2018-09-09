@@ -4,3 +4,4 @@ colorclass
 terminaltables
 blessed
 enum
+colorclass
