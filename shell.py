@@ -3,7 +3,9 @@
 import cmd, json, re, math
 import pprint
 from Robinhood import Robinhood
-from beautifultable import BeautifulTable
+from terminaltables import SingleTable
+from colorclass import Color
+from blessed import Terminal
 from config import USERNAME, PASSWORD
 
 class RobinhoodShell(cmd.Cmd):
@@ -53,20 +55,26 @@ class RobinhoodShell(cmd.Cmd):
     # ----- basic commands -----
     def do_l(self, arg):
         'Lists current portfolio'
+        t = Terminal()
         portfolio = self.trader.portfolios()
         if portfolio['extended_hours_equity']:
             equity =  float(portfolio['extended_hours_equity'])
         else:
             equity =  float(portfolio['equity'])
 
-        print 'Equity Value: %.2f' % equity
+        eq = '%.2f' % equity
         previous_close = float(portfolio['adjusted_equity_previous_close'])
         change = equity - previous_close
-        print '%s%.2f Today (%.2f%%)' % (('+' if change > 0 else ''), change, change/previous_close * 100.0)
+        change_pct =  '%.2f' % (change/previous_close * 100.0)
+        change_pct = color_data(change_pct)
+        change = color_data(change)
 
         account_details = self.trader.get_account()
         if 'margin_balances' in account_details:
-            print 'Buying Power:', account_details['margin_balances']['unallocated_margin_cash']
+            buying_power = account_details['margin_balances']['unallocated_margin_cash']
+
+        account_table = SingleTable([['Portfolio Value','Change','Buying Power'],[eq, change+' ('+change_pct+'%)', buying_power]],'Account')
+        print(account_table.table)
 
         # Load Stocks
         positions = self.trader.securities_owned()
@@ -82,13 +90,8 @@ class RobinhoodShell(cmd.Cmd):
                 else:
                     price = quote['last_trade_price']
 
-        table = BeautifulTable()
-        table.top_border_char = '='
-        table.bottom_border_char = '='
-        table.header_seperator_char = '='
-        table.column_seperator_char = ':'
-
-        table.column_headers = ["symbol", "current price", "qty", "total equity", "cost basis", "p/l" , "day change", "val change", "day %"]
+        table_data = []
+        table_data.append(["Symbol", "Last", "Shares", "Equity", "Avg Cost", "Return" , "Day", "EquityChange", "Day %"])
 
         for position in positions['results']:
             quantity = int(float(position['quantity']))
@@ -100,17 +103,33 @@ class RobinhoodShell(cmd.Cmd):
             day_change = float(quotes_data[symbol]['last_trade_price']) - float(quotes_data[symbol]['previous_close'])
             day_change_q_val = '{:04.2f}'.format(quantity * day_change)
             day_change_pct = '{:04.2f}'.format(float( ( day_change / float(quotes_data[symbol]['previous_close']) ) * 100))
-            table.append_row([symbol, price, quantity, total_equity, buy_price, p_l, day_change,day_change_q_val,day_change_pct])
+            table_data.append([
+                symbol, 
+                price, 
+                quantity, 
+                total_equity, 
+                buy_price, 
+                color_data(p_l), 
+                color_data(day_change),
+                color_data(day_change_q_val),
+                color_data(day_change_pct)
+                ])
 
-        print "Stocks:"
-        print(table)
+        table = SingleTable(table_data,'Portfolio')
+        table.inner_row_border = True
+        table.justify_columns = {0: 'center' }
+
+        print table.table
 
     def do_lo(self, arg):
         'Lists current options portfolio'
         # Load Options
+        options_t_data=[]
         option_positions = self.trader.options_owned()
-        table = BeautifulTable()
-        table.column_headers = ["option", "price", "quantity", "equity", "cost basis", "p/l"]
+        options_table = SingleTable(options_t_data,'Options')
+        options_table.inner_row_border = True
+        options_table.justify_columns = {0: 'center' }
+        options_t_data.append(["Symbol","Type","Experation","Strike", "Price", "QTY", "Equity", "Cost", "Total Return","Today"])
 
         for op in option_positions:
             quantity = float(op['quantity'])
@@ -124,22 +143,42 @@ class RobinhoodShell(cmd.Cmd):
 
             instrument = op['option']
             option_data = self.trader.session.get(instrument).json()
+            # skip expired  -- verify when it changes state day of or, after market close on expieration
+            if option_data['state'] == "expired":
+                continue
             expiration_date = option_data['expiration_date']
             strike = float(option_data['strike_price'])
             type = option_data['type']
-            symbol = op['chain_symbol'] + ' ' + expiration_date + ' ' + type + ' $' + str(strike)
+            symbol = op['chain_symbol']
+            option_type = str(type).upper()
+            expiration = expiration_date
+            strike_price = '$'+str(strike)
             info = self.trader.get_option_marketdata(instrument)
             last_price = float(info['adjusted_mark_price'])
             total_equity = (100 * last_price) * quantity
             change = total_equity - (float(cost) * quantity)
-            table.append_row([symbol, last_price, quantity, total_equity, cost, change])
+            change_pct = '{:04.2f}'.format(change / float(cost) * 100)
+            day_change = float(info['adjusted_mark_price']) - float(info['previous_close_price']) 
+            day_pct = '{:04.2f}'.format((day_change / float(info['previous_close_price']) ) * 100)
+            options_t_data.append([
+                symbol,option_type,
+                expiration,
+                strike_price ,
+                last_price, 
+                quantity, 
+                total_equity, 
+                cost, 
+                color_data(change) +' ('+ color_data(change_pct) +'%)',
+                color_data(day_change) +' ('+ color_data(day_pct) +'%)'
+                ])
 
-        print "Options:"
-        print(table)
+        print(options_table.table)
 
     def do_w(self, arg):
         'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
         parts = arg.split()
+
+
         if len(parts) == 2:
             if parts[0] == 'a':
                 self.watchlist.append(parts[1].strip())
@@ -147,21 +186,26 @@ class RobinhoodShell(cmd.Cmd):
                 self.watchlist = [r for r in self.watchlist if not r == parts[1].strip()]
             print "Done"
         else:
-            table = BeautifulTable()
-            table.top_border_char = '='
-            table.bottom_border_char = '='
-            table.header_seperator_char = '='
-            table.column_seperator_char = ':'
-            table.column_headers = ["symbol", "current price", "open","today", "%"]
+            watch_t_data=[]
+            watch_table = SingleTable(watch_t_data,'Watch List')
+            watch_table.inner_row_border = True
+            watch_table.justify_columns = {0: 'center', 1: 'center', 2: 'center', 3:'center',4: 'center'}
+            watch_t_data.append(["Symbol","Ask Price", "Open", "Today", "%"])
 
             if len(self.watchlist) > 0:
                 raw_data = self.trader.quotes_data(self.watchlist)
                 quotes_data = {}
                 for quote in raw_data:
                     day_change = float(quote['last_trade_price']) - float(quote['previous_close'])
-                    day_change_pct = ( day_change / float(quote['previous_close']) ) * 100
-                    table.append_row([quote['symbol'], quote['last_trade_price'], quote['previous_close'], day_change,day_change_pct])
-                print(table)
+                    day_change_pct = '{:05.2f}'.format(( day_change / float(quote['previous_close']) ) * 100)
+                    watch_t_data.append([
+                        quote['symbol'], 
+                        '{:05.2f}'.format(float(quote['last_trade_price'])), 
+                        '{:05.2f}'.format(float(quote['previous_close'])), 
+                        color_data(day_change),
+                        color_data(day_change_pct)
+                        ])
+                print(watch_table.table)
             else:
                 print "Watchlist empty!"
 
@@ -255,13 +299,11 @@ class RobinhoodShell(cmd.Cmd):
         'List open orders'
         open_orders = self.trader.get_open_orders()
         if open_orders:
-            table = BeautifulTable()
-            table.top_border_char = '='
-            table.bottom_border_char = '='
-            table.header_seperator_char = '='
-            table.column_seperator_char = ':'
-
-            table.column_headers = ["index", "symbol", "price", "quantity", "type", "id"]
+            open_t_data=[]
+            open_table = SingleTable(open_t_data,'open List')
+            open_table.inner_row_border = True
+            open_table.justify_columns = {0: 'center', 1: 'center', 2: 'center', 3:'center',4: 'center'}
+            open_t_data.append( ["index", "symbol", "price", "quantity", "type", "id"])
 
             index = 1
             for order in open_orders:
@@ -273,7 +315,7 @@ class RobinhoodShell(cmd.Cmd):
                     order_price = order['price']
                     order_type  = order['side']+" "+order['type']
 
-                table.append_row([
+                open_t_data.append([
                     index,
                     self.get_symbol(order['instrument']),
                     order_price,
@@ -283,7 +325,7 @@ class RobinhoodShell(cmd.Cmd):
                 ])
                 index += 1
 
-            print(table)
+            print(open_table.table)
         else:
             print "No Open Orders"
 
@@ -373,20 +415,29 @@ class RobinhoodShell(cmd.Cmd):
         else:
             raw_data = self.trader.quotes_data(symbols)
             quotes_data = {}
-
-            table = BeautifulTable()
-            table.top_border_char = '='
-            table.bottom_border_char = '='
-            table.header_seperator_char = '='
-            table.column_seperator_char = ':'
-            table.column_headers = ["symbol", "current price", "open","today", "%"]
+            quote_t_data=[]
+            quote_table = SingleTable(quote_t_data,'Quote List')
+            quote_table.inner_row_border = True
+            quote_table.justify_columns = {0: 'center', 1: 'center', 2: 'center', 3:'center',4: 'center'}
+            quote_t_data.append(["Symbol", "Current Price", "Open","Change", "Ask","Bid"])
             for quote in raw_data:
                 if not quote:
                     continue
                 day_change = float(quote['last_trade_price']) - float(quote['previous_close'])
                 day_change_pct = ( day_change / float(quote['previous_close']) ) * 100
-                table.append_row([quote['symbol'], quote['last_trade_price'], quote['previous_close'], day_change,day_change_pct])
-            print(table)
+                ask_price = '{:05.2f}'.format(float(quote['ask_price']))
+                ask_size = quote['ask_size']
+                bid_price = '{:05.2f}'.format(float(quote['bid_price']))
+                bid_size  = quote['bid_size']
+                quote_t_data.append([
+                    quote['symbol'], 
+                    '{:05.2f}'.format(float(quote['last_trade_price'])), 
+                    '{:05.2f}'.format(float(quote['previous_close'])),
+                    color_data(day_change)+' ('+color_data('{:05.2f}'.format(day_change_pct))+'%)',
+                    str(ask_price)+' x '+str(ask_size),
+                    str(bid_price)+' x '+str(bid_size)
+                    ])
+            print(quote_table.table)
 
     def do_qq(self, arg):
         'Get quote for stock q <symbol> or option q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>'
@@ -413,13 +464,17 @@ class RobinhoodShell(cmd.Cmd):
 
             arg_dict = {'symbol': symbol, 'type': type, 'expiration_dates': expiry, 'strike_price': strike, 'state': 'active', 'tradability': 'tradable'};
             quotes = self.trader.get_option_quote(arg_dict);
-            table = BeautifulTable();
-            table.column_headers = ['expiry', 'price']
+
+            qquote_t_data=[]
+            qquote_table = SingleTable(qquote_t_data,'Quote List')
+            qquote_table.inner_row_border = True
+            qquote_table.justify_columns = {0: 'center', 1: 'center'}
+            qquote_t_data.append(['expiry', 'price'])
 
             for row in quotes:
-                table.append_row(row)
+                qquote_t_data.append(row)
 
-            print table
+            print(qquote_table.table)
         else:
             try:
                 self.trader.print_quote(symbol)
@@ -462,6 +517,18 @@ class RobinhoodShell(cmd.Cmd):
     def add_instrument(self, url, symbol):
         self.instruments_cache[symbol] = url
         self.instruments_reverse_cache[url] = symbol
+
+def color_data(value):
+    term  = Terminal()
+    if float(value) > 0:
+        number = Color('{autogreen}'+str(value)+'{/autogreen}')
+    elif float(value) < 0:
+        number = Color('{autored}'+str(value)+'{/autored}')
+    else:
+        number = str(value)
+
+    return number
+
 
 def parse(arg):
     'Convert a series of zero or more numbers to an argument tuple'

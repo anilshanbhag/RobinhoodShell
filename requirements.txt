@@ -1,4 +1,6 @@
-beautifultable==0.3.0
-enum==0.4.6
-requests==2.18.4
-six==1.11.0
+requests
+six
+colorclass
+terminaltables
+blessed
+enum
