@@ -6,6 +6,7 @@ from Robinhood import Robinhood
 from terminaltables import SingleTable
 from colorclass import Color
 from blessed import Terminal
+from textwrap import wrap
 from config import USERNAME, PASSWORD
 
 class RobinhoodShell(cmd.Cmd):
@@ -364,6 +365,23 @@ class RobinhoodShell(cmd.Cmd):
                 pass
         print "Done"
 
+    def do_news(self,arg,show_num=5):
+        if len(arg) == 0:
+            print "Missing symbol"
+        else:
+            news_data = self.trader.get_news(arg.upper())
+
+            if news_data['count'] == 0:
+                print("No News available")
+                return
+
+            for x in range(0,show_num):
+                news_box(news_data['results'][x]['source'], news_data['results'][x]['published_at'], news_data['results'][x]['summary'], news_data['results'][x]['title'],news_data['results'][x]['url'])
+            #    print("-----------------------------------------------------------------------------------")
+            #    print("Source: "+news_data['results'][x]['source']+': '+news_data['results'][x]['published_at']+' - '+news_data['results'][x]['title'])
+            #    print("URL: "+news_data['results'][x]['url'])
+            #    print("Summary: "+news_data['results'][x]['summary'])
+
     def do_mp(self, arg):
         'Buy as many shares possible by defined max dollar amount:  mp <symbol> <max_spend> <?price_limit>'
         parts = arg.split()
@@ -519,7 +537,6 @@ class RobinhoodShell(cmd.Cmd):
         self.instruments_reverse_cache[url] = symbol
 
 def color_data(value):
-    term  = Terminal()
     if float(value) > 0:
         number = Color('{autogreen}'+str(value)+'{/autogreen}')
     elif float(value) < 0:
@@ -529,6 +546,16 @@ def color_data(value):
 
     return number
 
+def news_box(news_src,news_date,news_summary,news_title,news_url):
+    news_data = []
+    news_table = SingleTable(news_data)
+    news_table.inner_row_border = True
+    news_data.append(['Title',news_src+': '+news_title+' @ '+news_date])
+    display_summary = '\n'.join(wrap(news_summary,80))
+    news_data.append(['Summary',display_summary])
+    news_data.append(['Link', news_url])
+
+    print(news_table.table)
 
 def parse(arg):
     'Convert a series of zero or more numbers to an argument tuple'
