@@ -924,6 +924,11 @@ class Robinhood:
         data = res.json()
         return data
 
+    def get_stock_marketdata(self, instruments):
+        info = self.session.get(self.endpoints['marketdata'] +
+                "quotes/?instruments=" + ','.join(instruments)).json()
+        return info['results']
+
     ##############################
     # GET OPTIONS POSITIONS
     ##############################

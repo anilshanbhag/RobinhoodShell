@@ -79,48 +79,44 @@ class RobinhoodShell(cmd.Cmd):
 
         # Load Stocks
         positions = self.trader.securities_owned()
+        instruments = [position['instrument'] for position in positions['results']]
         symbols = [self.get_symbol(position['instrument']) for position in positions['results']]
 
-        quotes_data = {}
-        if len(symbols) > 0:
-            raw_data = self.trader.quotes_data(symbols)
-            for quote in raw_data:
-                quotes_data[quote['symbol']] = quote
-                if quote['last_extended_hours_trade_price']:
-                    price = quote['last_extended_hours_trade_price']
-                else:
-                    price = quote['last_trade_price']
+        market_data = self.trader.get_stock_marketdata(instruments)
 
         table_data = []
         table_data.append(["Symbol", "Last", "Shares", "Equity", "Avg Cost", "Return" , "Day", "EquityChange", "Day %"])
 
+        i = 0
         for position in positions['results']:
             quantity = int(float(position['quantity']))
             symbol = self.get_symbol(position['instrument'])
-            price = quotes_data[symbol]['last_trade_price']
+            price = market_data[i]['last_trade_price']
             total_equity = float(price) * quantity
             buy_price = float(position['average_buy_price'])
             p_l = total_equity - buy_price * quantity
-            day_change = float(quotes_data[symbol]['last_trade_price']) - float(quotes_data[symbol]['previous_close'])
+            day_change = float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close'])
             day_change_q_val = '{:04.2f}'.format(quantity * day_change)
-            day_change_pct = '{:04.2f}'.format(float( ( day_change / float(quotes_data[symbol]['previous_close']) ) * 100))
+            day_change_pct = '{:04.2f}'.format(float(( day_change /
+                float(market_data[i]['previous_close']) ) * 100))
             table_data.append([
-                symbol, 
-                price, 
-                quantity, 
-                total_equity, 
-                buy_price, 
-                color_data(p_l), 
+                symbol,
+                price,
+                quantity,
+                total_equity,
+                buy_price,
+                color_data(p_l),
                 color_data(day_change),
                 color_data(day_change_q_val),
                 color_data(day_change_pct)
                 ])
+            i += 1
 
         table = SingleTable(table_data,'Portfolio')
         table.inner_row_border = True
         table.justify_columns = {0: 'center' }
 
-        print table.table
+        print(table.table)
 
     def do_lo(self, arg):
         'Lists current options portfolio'
@@ -159,16 +155,16 @@ class RobinhoodShell(cmd.Cmd):
             total_equity = (100 * last_price) * quantity
             change = total_equity - (float(cost) * quantity)
             change_pct = '{:04.2f}'.format(change / float(cost) * 100)
-            day_change = float(info['adjusted_mark_price']) - float(info['previous_close_price']) 
+            day_change = float(info['adjusted_mark_price']) - float(info['previous_close_price'])
             day_pct = '{:04.2f}'.format((day_change / float(info['previous_close_price']) ) * 100)
             options_t_data.append([
                 symbol,option_type,
                 expiration,
                 strike_price ,
-                last_price, 
-                quantity, 
-                total_equity, 
-                cost, 
+                last_price,
+                quantity,
+                total_equity,
+                cost,
                 color_data(change) +' ('+ color_data(change_pct) +'%)',
                 color_data(day_change) +' ('+ color_data(day_pct) +'%)'
                 ])
@@ -194,15 +190,17 @@ class RobinhoodShell(cmd.Cmd):
             watch_t_data.append(["Symbol","Ask Price", "Open", "Today", "%"])
 
             if len(self.watchlist) > 0:
-                raw_data = self.trader.quotes_data(self.watchlist)
+                instruments = [self.get_instrument(s)['url'] for s in
+                        self.watchlist]
+                raw_data = self.trader.get_stock_marketdata(instruments)
                 quotes_data = {}
                 for quote in raw_data:
                     day_change = float(quote['last_trade_price']) - float(quote['previous_close'])
                     day_change_pct = '{:05.2f}'.format(( day_change / float(quote['previous_close']) ) * 100)
                     watch_t_data.append([
-                        quote['symbol'], 
-                        '{:05.2f}'.format(float(quote['last_trade_price'])), 
-                        '{:05.2f}'.format(float(quote['previous_close'])), 
+                        quote['symbol'],
+                        '{:05.2f}'.format(float(quote['last_trade_price'])),
+                        '{:05.2f}'.format(float(quote['previous_close'])),
                         color_data(day_change),
                         color_data(day_change_pct)
                         ])
@@ -424,14 +422,15 @@ class RobinhoodShell(cmd.Cmd):
    #         print "Bad Order"
 
     def do_q(self, arg):
-        'Get detailed quote for stock: q <symblol(s)>'
+        'Get detailed quote for stock: q <symbol(s)>'
 
         symbols = re.split('\W+',arg)
 
         if len(arg) == 0:
             print "Missing symbol(s)"
         else:
-            raw_data = self.trader.quotes_data(symbols)
+            instruments = [self.get_instrument(s)['url'] for s in symbols]
+            raw_data = self.trader.get_stock_marketdata(instruments)
             quotes_data = {}
             quote_t_data=[]
             quote_table = SingleTable(quote_t_data,'Quote List')
@@ -448,8 +447,8 @@ class RobinhoodShell(cmd.Cmd):
                 bid_price = '{:05.2f}'.format(float(quote['bid_price']))
                 bid_size  = quote['bid_size']
                 quote_t_data.append([
-                    quote['symbol'], 
-                    '{:05.2f}'.format(float(quote['last_trade_price'])), 
+                    quote['symbol'],
+                    '{:05.2f}'.format(float(quote['last_trade_price'])),
                     '{:05.2f}'.format(float(quote['previous_close'])),
                     color_data(day_change)+' ('+color_data('{:05.2f}'.format(day_change_pct))+'%)',
                     str(ask_price)+' x '+str(ask_size),
