@@ -254,7 +254,7 @@ class Robinhood:
             req.raise_for_status()
             data = req.json()
         except requests.exceptions.HTTPError:
-            raise NameError('Invalid Symbols: ' + ",".join(stocks)).upper() #TODO: custom exception
+            raise NameError('Invalid Symbols: ' + ",".join(stocks)) #TODO: custom exception
 
         return data["results"]
 
