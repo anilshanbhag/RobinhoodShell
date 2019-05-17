@@ -7,7 +7,22 @@ from terminaltables import SingleTable
 from colorclass import Color
 from blessed import Terminal
 from textwrap import wrap
-from config import USERNAME, PASSWORD
+from config import USERNAME, PASSWORD, CHALLENGE_TYPE
+
+"""
+RobinhoodShell builds on Robinhood *unofficial* python library
+to create a command line interface for interacting with Robinhood
+
+* `l` : Lists your current portfolio
+* `lo` : Lists your current portfolio
+* `b <symbol> <quantity> <price>` : Submits a limit order to buy <quantity> stocks of <symbol> at <price>
+* `s <symbol> <quantity> <price>` : Submits a limit order to sell <quantity> stocks of <symbol> at <price>
+* `q <symbol>` : Get quote (current price) for symbol
+* `q <symbol> <call/put> <strike_price> <(optional) expiration_date YYYY-mm-dd>` : Get quote for option, all expiration dates if none specified
+* `o` : Lists all open orders
+* `c <id>` : Cancel an open order identified by <id> [<id> of a open order can be got from output of `o`]
+* `bye` : Exit the shell
+"""
 
 class RobinhoodShell(cmd.Cmd):
     intro = 'Welcome to the Robinhood shell. Type help or ? to list commands.\n'
@@ -34,7 +49,10 @@ class RobinhoodShell(cmd.Cmd):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.trader = Robinhood()
-        self.trader.login(username=USERNAME, password=PASSWORD)
+        challenge_type = 'email'
+        if CHALLENGE_TYPE == 'sms':
+          challenge_type = 'sms'
+        self.trader.login(username=USERNAME, password=PASSWORD, challenge_type = challenge_type)
 
         try:
             data = open(self.instruments_cache_file).read()
@@ -75,7 +93,7 @@ class RobinhoodShell(cmd.Cmd):
             buying_power = account_details['margin_balances']['unallocated_margin_cash']
 
         account_table = SingleTable([['Portfolio Value','Change','Buying Power'],[eq, change+' ('+change_pct+'%)', buying_power]],'Account')
-        print(account_table.table)
+        print((account_table.table))
 
         # Load Stocks
         positions = self.trader.securities_owned()
@@ -116,7 +134,7 @@ class RobinhoodShell(cmd.Cmd):
         table.inner_row_border = True
         table.justify_columns = {0: 'center' }
 
-        print(table.table)
+        print((table.table))
 
     def do_lo(self, arg):
         'Lists current options portfolio'
@@ -169,7 +187,7 @@ class RobinhoodShell(cmd.Cmd):
                 color_data(day_change) +' ('+ color_data(day_pct) +'%)'
                 ])
 
-        print(options_table.table)
+        print((options_table.table))
 
     def do_w(self, arg):
         'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
@@ -181,7 +199,7 @@ class RobinhoodShell(cmd.Cmd):
                 self.watchlist.append(parts[1].strip())
             if parts[0] == 'r':
                 self.watchlist = [r for r in self.watchlist if not r == parts[1].strip()]
-            print "Done"
+            print("Done")
         else:
             watch_t_data=[]
             watch_table = SingleTable(watch_t_data,'Watch List')
@@ -204,9 +222,9 @@ class RobinhoodShell(cmd.Cmd):
                         color_data(day_change),
                         color_data(day_change_pct)
                         ])
-                print(watch_table.table)
+                print((watch_table.table))
             else:
-                print "Watchlist empty!"
+                print("Watchlist empty!")
 
     def do_b(self, arg):
         'Buy stock b <symbol> <quantity> <price>'
@@ -221,23 +239,23 @@ class RobinhoodShell(cmd.Cmd):
 
             stock_instrument = self.get_instrument(symbol)
             if not stock_instrument['url']:
-                print "Stock not found"
+                print("Stock not found")
                 return
 
             res = self.trader.place_buy_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
-                print "Error executing order"
+                print("Error executing order")
                 try:
                     data = res.json()
                     if 'detail' in data:
-                        print data['detail']
+                        print(data['detail'])
                 except:
                     pass
             else:
-                print "Done"
+                print("Done")
         else:
-            print "Bad Order"
+            print("Bad Order")
 
     def do_s(self, arg):
         'Sell stock s <symbol> <quantity> <?price>'
@@ -252,23 +270,23 @@ class RobinhoodShell(cmd.Cmd):
 
             stock_instrument = self.get_instrument(symbol)
             if not stock_instrument['url']:
-                print "Stock not found"
+                print("Stock not found")
                 return
 
             res = self.trader.place_sell_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
-                print "Error executing order"
+                print("Error executing order")
                 try:
                     data = res.json()
                     if 'detail' in data:
-                        print data['detail']
+                        print(data['detail'])
                 except:
                     pass
             else:
-                print "Done"
+                print("Done")
         else:
-            print "Bad Order"
+            print("Bad Order")
 
     def do_sl(self, arg):
         'Setup stop loss on stock sl <symbol> <quantity> <price>'
@@ -282,17 +300,17 @@ class RobinhoodShell(cmd.Cmd):
             res = self.trader.place_stop_loss_order(stock_instrument, quantity, price)
 
             if not (res.status_code == 200 or res.status_code == 201):
-                print "Error executing order"
+                print("Error executing order")
                 try:
                     data = res.json()
                     if 'detail' in data:
-                        print data['detail']
+                        print(data['detail'])
                 except:
                     pass
             else:
-                print "Done"
+                print("Done")
         else:
-            print "Bad Order"
+            print("Bad Order")
 
     def do_o(self, arg):
         'List open orders'
@@ -324,9 +342,9 @@ class RobinhoodShell(cmd.Cmd):
                 ])
                 index += 1
 
-            print(open_table.table)
+            print((open_table.table))
         else:
-            print "No Open Orders"
+            print("No Open Orders")
 
     def do_c(self, arg):
         'Cancel open order c <index> or c <id>'
@@ -343,15 +361,16 @@ class RobinhoodShell(cmd.Cmd):
             if order_index < len(open_orders):
                 order_id = open_orders[order_index]['id']
             else:
-                print "Bad index"
+                print("Bad index")
                 return
 
         try:
+            print(order_id)
             self.trader.cancel_order(order_id)
-            print "Done"
+            print("Done")
         except Exception as e:
-            print "Error executing cancel"
-            print e
+            print("Error executing cancel")
+            print(e)
 
     def do_ca(self, arg):
         'Cancel all open orders'
@@ -361,11 +380,11 @@ class RobinhoodShell(cmd.Cmd):
                 self.trader.cancel_order(order['id'])
             except Exception as e:
                 pass
-        print "Done"
+        print("Done")
 
     def do_news(self,arg,show_num=5):
         if len(arg) == 0:
-            print "Missing symbol"
+            print("Missing symbol")
         else:
             news_data = self.trader.get_news(arg.upper())
 
@@ -375,10 +394,6 @@ class RobinhoodShell(cmd.Cmd):
 
             for x in range(0,show_num):
                 news_box(news_data['results'][x]['source'], news_data['results'][x]['published_at'], news_data['results'][x]['summary'], news_data['results'][x]['title'],news_data['results'][x]['url'])
-            #    print("-----------------------------------------------------------------------------------")
-            #    print("Source: "+news_data['results'][x]['source']+': '+news_data['results'][x]['published_at']+' - '+news_data['results'][x]['title'])
-            #    print("URL: "+news_data['results'][x]['url'])
-            #    print("Summary: "+news_data['results'][x]['summary'])
 
     def do_mp(self, arg):
         'Buy as many shares possible by defined max dollar amount:  mp <symbol> <max_spend> <?price_limit>'
@@ -388,7 +403,7 @@ class RobinhoodShell(cmd.Cmd):
             #quantity = parts[1]
             spend = parts[1]
             if len(parts) == 3:
-                print "Parts: 3"
+                print("Parts: 3")
                 price_limit = float(parts[2])
             else:
                 price_limit = 0.0
@@ -397,13 +412,13 @@ class RobinhoodShell(cmd.Cmd):
                 cur_data = self.trader.quote_data(symbol)
                 last_price = cur_data['last_trade_price']
             except:
-                print "Invalid Ticker?"
+                print("Invalid Ticker?")
                 pass
                 return
 
             # quote['last_trade_price']
             quantity = int(math.floor(float(spend) / float(last_price)))
-            print("\nBuying %s\n Max Spend: %s\nQTY: %s\n Current Price: %s\nMax Price: %s\n" % (symbol,spend, quantity, last_price, price_limit))
+            print(("\nBuying %s\n Max Spend: %s\nQTY: %s\n Current Price: %s\nMax Price: %s\n" % (symbol,spend, quantity, last_price, price_limit)))
 
    #         stock_instrument = self.trader.instruments(symbol)[0]
    #         res = self.trader.place_buy_order(stock_instrument, quantity, price)
@@ -427,7 +442,7 @@ class RobinhoodShell(cmd.Cmd):
         symbols = re.split('\W+',arg)
 
         if len(arg) == 0:
-            print "Missing symbol(s)"
+            print("Missing symbol(s)")
         else:
             instruments = [self.get_instrument(s)['url'] for s in symbols]
             raw_data = self.trader.get_stock_marketdata(instruments)
@@ -454,7 +469,7 @@ class RobinhoodShell(cmd.Cmd):
                     str(ask_price)+' x '+str(ask_size),
                     str(bid_price)+' x '+str(bid_size)
                     ])
-            print(quote_table.table)
+            print((quote_table.table))
 
     def do_qq(self, arg):
         'Get quote for stock q <symbol> or option q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>'
@@ -462,17 +477,17 @@ class RobinhoodShell(cmd.Cmd):
         try:
             symbol = arg[0];
         except:
-            print "Please check arguments again. Format: "
-            print "Stock: q <symbol>"
-            print "Option: q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+            print("Please check arguments again. Format: ")
+            print("Stock: q <symbol>")
+            print("Option: q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>")
         type = strike = expiry = None
         if len(arg) > 1:
             try:
                 type = arg[1]
                 strike = arg[2]
             except Exception as e:
-                print "Please check arguments again. Format: "
-                print "q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>"
+                print("Please check arguments again. Format: ")
+                print("q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>")
 
             try:
                 expiry = arg[3]
@@ -491,12 +506,12 @@ class RobinhoodShell(cmd.Cmd):
             for row in quotes:
                 qquote_t_data.append(row)
 
-            print(qquote_table.table)
+            print((qquote_table.table))
         else:
             try:
                 self.trader.print_quote(symbol)
             except:
-                print "Error getting quote for:", symbol
+                print("Error getting quote for:", symbol)
 
     def do_bye(self, arg):
         open(self.instruments_cache_file, 'w').write(json.dumps(self.instruments_cache))
@@ -554,7 +569,7 @@ def news_box(news_src,news_date,news_summary,news_title,news_url):
     news_data.append(['Summary',display_summary])
     news_data.append(['Link', news_url])
 
-    print(news_table.table)
+    print((news_table.table))
 
 def parse(arg):
     'Convert a series of zero or more numbers to an argument tuple'

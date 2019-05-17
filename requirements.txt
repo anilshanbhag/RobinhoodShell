@@ -1,7 +1,8 @@
-requests
-six
+requests>=2.13.0,<=2.18.4
+six>=1.10.0,<=1.11.0
 colorclass
 terminaltables
 blessed
-enum
+#enum
 colorclass
+python-dateutil

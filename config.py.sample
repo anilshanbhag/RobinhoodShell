@@ -1,2 +1,3 @@
 USERNAME = 'username'
 PASSWORD = 'password'
+CHALLENGE_TYPE = 'email'
