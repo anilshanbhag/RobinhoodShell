@@ -43,16 +43,29 @@ class RobinhoodShell(cmd.Cmd):
     # Cache file used to store instrument cache
     watchlist_file = 'watchlist.data'
 
+    # Auth file
+    auth_file = 'auth.data'
+
     # List of stocks in watchlist
     watchlist = []
 
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.trader = Robinhood()
-        challenge_type = 'email'
-        if CHALLENGE_TYPE == 'sms':
-          challenge_type = 'sms'
-        self.trader.login(username=USERNAME, password=PASSWORD, challenge_type = challenge_type)
+
+        try:
+            data = open(self.auth_file).read()
+            auth_data = json.loads(data)
+            if 'auth_token' in auth_data:
+              self.trader.device_token = auth_data['device_token']
+              self.trader.auth_token = auth_data['auth_token']
+              self.trader.refresh_token = auth_data['refresh_token']
+              self.trader.headers['Authorization'] = 'Bearer ' + self.trader.auth_token
+        except:
+            challenge_type = 'email'
+            if CHALLENGE_TYPE == 'sms':
+              challenge_type = 'sms'
+            self.trader.login(username=USERNAME, password=PASSWORD, challenge_type = challenge_type)
 
         try:
             data = open(self.instruments_cache_file).read()
@@ -516,6 +529,11 @@ class RobinhoodShell(cmd.Cmd):
     def do_bye(self, arg):
         open(self.instruments_cache_file, 'w').write(json.dumps(self.instruments_cache))
         open(self.watchlist_file, 'w').write(json.dumps(self.watchlist))
+        auth_data = {}
+        auth_data['device_token'] = self.trader.device_token
+        auth_data['auth_token'] = self.trader.auth_token
+        auth_data['refresh_token'] = self.trader.refresh_token
+        open(self.auth_file, 'w').write(json.dumps(auth_data))
         return True
 
     # ------ utils --------

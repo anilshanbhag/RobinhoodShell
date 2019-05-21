@@ -107,6 +107,27 @@ class Robinhood:
         h = '{0:06d}'.format((struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000)
         return h
 
+    def relogin_oauth2(self):
+        '''
+        (Re)login using the Oauth2 refresh token
+        '''
+        url = "https://api.robinhood.com/oauth2/token/"
+        data = {
+            "grant_type": "refresh_token",
+            "refresh_token": self.refresh_token,
+            "scope": "internal",
+            "client_id": self.client_id,
+            "expires_in": 86400,
+        }
+        print(data)
+        res = self.session.post(url, data=data)
+        print(res)
+        res = res.json()
+        self.access_token   = res["access_token"]
+        self.refresh_token  = res["refresh_token"]
+        self.mfa_code       = res["mfa_code"]
+        self.scope          = res["scope"]
+
     def login(self,
               username,
               password,
@@ -125,7 +146,7 @@ class Robinhood:
         self.password = password
 
         if self.device_token == "":
-                self.GenerateDeviceToken()
+            self.GenerateDeviceToken()
 
         if qr_code:
             self.qr_code = qr_code
