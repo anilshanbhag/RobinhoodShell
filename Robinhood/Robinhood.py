@@ -113,17 +113,16 @@ class Robinhood:
         '''
         url = "https://api.robinhood.com/oauth2/token/"
         data = {
+            "client_id": self.client_id,
+            "device_token": self.device_token,
             "grant_type": "refresh_token",
             "refresh_token": self.refresh_token,
             "scope": "internal",
-            "client_id": self.client_id,
             "expires_in": 86400,
         }
-        print(data)
         res = self.session.post(url, data=data)
-        print(res)
         res = res.json()
-        self.access_token   = res["access_token"]
+        self.auth_token   = res["access_token"]
         self.refresh_token  = res["refresh_token"]
         self.mfa_code       = res["mfa_code"]
         self.scope          = res["scope"]
