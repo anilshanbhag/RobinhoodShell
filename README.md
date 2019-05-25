@@ -21,23 +21,22 @@ Setup
 
 If you don't have a Robinhood account, sign up for Robinhood. It is a free stock trading platform. Use my [referral link](https://share.robinhood.com/brianp668/) to sign up and get one free stock :) 
 
-Download Robinhood Shell by downloading the zip file ([link](https://github.com/ploch/RobinhoodShell/archive/dev.zip)) OR by using git 
+Before you begin, make sure you have `Python3` installed. Robinhood shell only works with python3. Some of the functionality is broken on python2.7 
 
-=======
+1. Download Robinhood Shell by downloading the zip file ([link](https://github.com/anilshanbhag/RobinhoodShell/archive/dev.zip)) OR by using git 
 
 ```
-git clone https://github.com/ploch/RobinhoodShell.git
+git clone https://github.com/anilshanbhag/RobinhoodShell.git
 
 cd RobinhoodShell
-git checkout dev
 ```
 
-Install the dependencies
+2. Install the dependencies
 ```
-sudo pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-Create and save your username/password in the config file
+3. Create and save your username/password in the config file
 ```
 cp config.py.sample config.py
 # Edit config.py - replace username/password with your real username/password
