@@ -600,9 +600,8 @@ def parse(arg):
 
 if __name__ == '__main__':
     if len(sys.argv)>1:
-	    if sys.argv[1]=='-c'
-		    RobinhoodShell().onecmd(sys.argv[2])
-			RobinhoodShell().onecmd("bye")
+        if sys.argv[1]=='-c':
+            RobinhoodShell().onecmd(sys.argv[2])
+            RobinhoodShell().onecmd("bye")
     else:
-		RobinhoodShell().cmdloop()
-
+        RobinhoodShell().cmdloop()
