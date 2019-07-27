@@ -186,9 +186,16 @@ class Robinhood:
 
             try:
                 res = self.session.post(endpoints.login(), data=payload, timeout=15)
-                response_data = res.json()
-                if self.challenge_id == "" and "challenge" in response_data.keys():
-                    self.challenge_id = response_data["challenge"]["id"]
+                res_data = res.json()
+
+                if 'access_token' in res_data.keys() and 'refresh_token' in res_data.keys():
+                    self.auth_token = res_data['access_token']
+                    self.refresh_token = res_data['refresh_token']
+                    self.headers['Authorization'] = 'Bearer ' + self.auth_token
+                    return True
+
+                if self.challenge_id == "" and "challenge" in res_data.keys():
+                    self.challenge_id = res_data["challenge"]["id"]
                 self.headers["X-ROBINHOOD-CHALLENGE-RESPONSE-ID"] = self.challenge_id #has to add this to stay logged in
                 sms_challenge_endpoint = "https://api.robinhood.com/challenge/{}/respond/".format(self.challenge_id)
                 print("No 2FA Given")

@@ -77,13 +77,14 @@ class RobinhoodShell(cmd.Cmd):
               try:
                 self.trader.user()
               except:
+                del self.trader.headers['Authorization']
                 self.trader.relogin_oauth2()
                 self._save_auth_data()
         except:
             challenge_type = 'email'
             if CHALLENGE_TYPE == 'sms':
               challenge_type = 'sms'
-            self.trader.login(username=USERNAME, password=PASSWORD, challenge_type = challenge_type)
+            self.trader.login(username = USERNAME, password = PASSWORD, challenge_type = challenge_type)
             self._save_auth_data()
 
         try:
