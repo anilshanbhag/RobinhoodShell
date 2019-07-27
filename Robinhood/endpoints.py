@@ -68,6 +68,9 @@ def document_requests():
     return api_url + "/upload/document_requests/"
 
 def user():
+    '''
+    {'url': 'https://api.robinhood.com/user/', 'id': 'XXX', 'id_info': 'https://api.robinhood.com/user/id/', 'username': 'XXX', 'email': 'XXX', 'email_verified': True, 'first_name': 'XXX', 'last_name': 'XXX', 'created_at': 'XXX'}
+    '''
     return api_url + "/user/"
 
 def watchlists():

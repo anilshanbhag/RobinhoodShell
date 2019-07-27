@@ -14,7 +14,7 @@ RobinhoodShell builds on Robinhood *unofficial* python library
 to create a command line interface for interacting with Robinhood
 
 * `l` : Lists your current portfolio
-* `lo` : Lists your current portfolio
+* `lo` : Lists your current portfolio's options
 * `b <symbol> <quantity> <price>` : Submits a limit order to buy <quantity> stocks of <symbol> at <price>
 * `s <symbol> <quantity> <price>` : Submits a limit order to sell <quantity> stocks of <symbol> at <price>
 * `q <symbol>` : Get quote (current price) for symbol
@@ -60,6 +60,12 @@ class RobinhoodShell(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.trader = Robinhood()
 
+        # Robinhood now uses 2FA
+        # The workflow we use is as follows
+        # If we find auth token in auth.data - try to see if it still works
+        # If yes, continue
+        # If no, try to refresh the token using refresh token
+        # If it still fails, we need to relogin with 2FA
         try:
             data = open(self.auth_file).read()
             auth_data = json.loads(data)
@@ -67,14 +73,18 @@ class RobinhoodShell(cmd.Cmd):
               self.trader.device_token = auth_data['device_token']
               self.trader.auth_token = auth_data['auth_token']
               self.trader.refresh_token = auth_data['refresh_token']
-              self.trader.relogin_oauth2()
-              self._save_auth_data()
               self.trader.headers['Authorization'] = 'Bearer ' + self.trader.auth_token
+              try:
+                self.trader.user()
+              except:
+                self.trader.relogin_oauth2()
+                self._save_auth_data()
         except:
             challenge_type = 'email'
             if CHALLENGE_TYPE == 'sms':
               challenge_type = 'sms'
             self.trader.login(username=USERNAME, password=PASSWORD, challenge_type = challenge_type)
+            self._save_auth_data()
 
         try:
             data = open(self.instruments_cache_file).read()

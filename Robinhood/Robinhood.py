@@ -292,6 +292,14 @@ class Robinhood:
     #                               GET DATA
     ###########################################################################
 
+    def user(self):
+        res = self.session.get(endpoints.user(), timeout=15)
+        res.raise_for_status()  # will throw without auth
+        data = res.json()
+
+        return data
+
+
     def investment_profile(self):
         """Fetch investment_profile """
 
@@ -1374,8 +1382,6 @@ class Robinhood:
             if(value is not None):
                 payload[field] = value
 
-        print(payload)
-
         try:
             res = self.session.post(endpoints.orders(), data=payload, timeout=15)
             res.raise_for_status()
@@ -1517,8 +1523,6 @@ class Robinhood:
             ]:
             if(value is not None):
                 payload[field] = value
-
-        print(payload)
 
         try:
             res = self.session.post(endpoints.orders(), data=payload, timeout=15)
@@ -1678,7 +1682,6 @@ class Robinhood:
             (:obj:`requests.request`): result from `orders` put command
         """
         if isinstance(order_id, str):
-            print("Inside")
             try:
                 order = self.session.get(endpoints.orders() + order_id, timeout=15).json()
             except (requests.exceptions.HTTPError) as err_msg:
