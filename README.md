@@ -40,6 +40,7 @@ pip install -r requirements.txt
 ```
 cp config.py.sample config.py
 # Edit config.py - replace username/password with your real username/password
+# Set CHALLENGE_TYPE = 'sms' or 'email' depending on how you want to do 2FA
 ```
 
 You are good to go. Start the shell by
