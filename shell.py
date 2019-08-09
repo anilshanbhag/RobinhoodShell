@@ -552,6 +552,8 @@ class RobinhoodShell(cmd.Cmd):
         self._save_auth_data()
         return True
 
+    do_EOF = do_bye
+    
     # ------ utils --------
     def get_symbol(self, url):
         if not url in self.instruments_reverse_cache:
