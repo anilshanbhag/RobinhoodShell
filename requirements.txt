@@ -1,4 +1,8 @@
-beautifultable==0.3.0
-enum==0.4.6
-requests==2.18.4
-six==1.11.0
+requests>=2.20.0
+six>=1.10.0,<=1.11.0
+colorclass
+terminaltables
+blessed
+#enum
+colorclass
+python-dateutil
