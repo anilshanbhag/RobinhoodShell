@@ -118,10 +118,10 @@ class RobinhoodShell(cmd.Cmd):
         previous_close = float(portfolio['adjusted_equity_previous_close'])
         change = equity - previous_close
         change_pct =  '%.2f' % (change/previous_close * 100.0)
-    
+
         # format
-        change = f"{change:.3f}"
-    
+        change = f"{change:.2f}"
+
         # colorize
         change_pct = color_data(change_pct)
         change = color_data(change)
@@ -150,12 +150,13 @@ class RobinhoodShell(cmd.Cmd):
             price = market_data[i]['last_trade_price']
             total_equity = float(price) * quantity
             buy_price = float(position['average_buy_price'])
-            p_l = f"{total_equity - (buy_price * quantity):.3f}"
-
-            day_change = f"{float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close']):.3f}"
+            p_l = f"{total_equity - (buy_price * quantity):.2f}"
+            total_equity = f"{total_equity:.2f}"
+            buy_price = f"{buy_price:.2f}"
+            day_change = f"{float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close']):.2f}"
             day_change_q_val = f"{float(quantity) * float(day_change):.2f}"
             day_change_pct = f"{float(day_change) / float(market_data[i]['previous_close']) * 100:.2f}"
-            price = f"{float(price):.3f}"
+            price = f"{float(price):.2f}"
 
             table_data.append([
                 symbol,
@@ -408,7 +409,6 @@ class RobinhoodShell(cmd.Cmd):
                 return
 
         try:
-            print(order_id)
             self.trader.cancel_order(order_id)
             print("Done")
         except Exception as e:
