@@ -118,6 +118,11 @@ class RobinhoodShell(cmd.Cmd):
         previous_close = float(portfolio['adjusted_equity_previous_close'])
         change = equity - previous_close
         change_pct =  '%.2f' % (change/previous_close * 100.0)
+    
+        # format
+        change = f"{change:.3f}"
+    
+        # colorize
         change_pct = color_data(change_pct)
         change = color_data(change)
 
@@ -145,11 +150,13 @@ class RobinhoodShell(cmd.Cmd):
             price = market_data[i]['last_trade_price']
             total_equity = float(price) * quantity
             buy_price = float(position['average_buy_price'])
-            p_l = total_equity - buy_price * quantity
-            day_change = float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close'])
-            day_change_q_val = '{:04.2f}'.format(quantity * day_change)
-            day_change_pct = '{:04.2f}'.format(float(( day_change /
-                float(market_data[i]['previous_close']) ) * 100))
+            p_l = f"{total_equity - (buy_price * quantity):.3f}"
+
+            day_change = f"{float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close']):.3f}"
+            day_change_q_val = f"{float(quantity) * float(day_change):.2f}"
+            day_change_pct = f"{float(day_change) / float(market_data[i]['previous_close']) * 100:.2f}"
+            price = f"{float(price):.3f}"
+
             table_data.append([
                 symbol,
                 price,
@@ -208,6 +215,8 @@ class RobinhoodShell(cmd.Cmd):
             change_pct = '{:04.2f}'.format(change / float(cost) * 100)
             day_change = float(info['adjusted_mark_price']) - float(info['previous_close_price'])
             day_pct = '{:04.2f}'.format((day_change / float(info['previous_close_price']) ) * 100)
+            # format after calc
+            day_change = f"{day_change:.3f}"
             options_t_data.append([
                 symbol,option_type,
                 expiration,
