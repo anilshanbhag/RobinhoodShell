@@ -223,15 +223,16 @@ class RobinhoodShell(cmd.Cmd):
         print((options_table.table))
 
     def do_w(self, arg):
-        'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbol>'
-        parts = arg.split()
+        'Show watchlist w \nAdd to watchlist w a <symbol> \nRemove from watchlist w r <symbols>'
+        parts = re.split('\W+',arg.upper())
 
-
-        if len(parts) == 2:
-            if parts[0] == 'a':
-                self.watchlist.append(parts[1].strip())
-            if parts[0] == 'r':
-                self.watchlist = [r for r in self.watchlist if not r == parts[1].strip()]
+        if len(parts) >= 2:
+            if parts[0] == 'A':
+                for p in parts[1:]:
+                    if p not in self.watchlist:
+                        self.watchlist.append(p.strip())
+            if parts[0] == 'R':
+                self.watchlist = [r for r in self.watchlist if r not in parts[1:]]
             print("Done")
         else:
             watch_t_data=[]
@@ -263,7 +264,7 @@ class RobinhoodShell(cmd.Cmd):
         'Buy stock b <symbol> <quantity> <price>'
         parts = arg.split()
         if len(parts) >= 2 and len(parts) <= 3:
-            symbol = parts[0]
+            symbol = parts[0].upper()
             quantity = parts[1]
             if len(parts) == 3:
                 price = float(parts[2])
@@ -294,7 +295,7 @@ class RobinhoodShell(cmd.Cmd):
         'Sell stock s <symbol> <quantity> <?price>'
         parts = arg.split()
         if len(parts) >= 2 and len(parts) <= 3:
-            symbol = parts[0]
+            symbol = parts[0].upper()
             quantity = parts[1]
             if len(parts) == 3:
                 price = float(parts[2])
@@ -325,7 +326,7 @@ class RobinhoodShell(cmd.Cmd):
         'Setup stop loss on stock sl <symbol> <quantity> <price>'
         parts = arg.split()
         if len(parts) == 3:
-            symbol = parts[0]
+            symbol = parts[0].upper()
             quantity = parts[1]
             price = float(parts[2])
 
@@ -432,7 +433,7 @@ class RobinhoodShell(cmd.Cmd):
         'Buy as many shares possible by defined max dollar amount:  mp <symbol> <max_spend> <?price_limit>'
         parts = arg.split()
         if len(parts) >= 2 and len(parts) <= 3:
-            symbol = parts[0]
+            symbol = parts[0].upper()
             #quantity = parts[1]
             spend = parts[1]
             if len(parts) == 3:
@@ -472,7 +473,7 @@ class RobinhoodShell(cmd.Cmd):
     def do_q(self, arg):
         'Get detailed quote for stock: q <symbol(s)>'
 
-        symbols = re.split('\W+',arg)
+        symbols = re.split('\W+',arg.upper())
 
         if len(arg) == 0:
             print("Missing symbol(s)")
@@ -508,7 +509,7 @@ class RobinhoodShell(cmd.Cmd):
         'Get quote for stock q <symbol> or option q <symbol> <call/put> <strike> <(optional) YYYY-mm-dd>'
         arg = arg.strip().split()
         try:
-            symbol = arg[0];
+            symbol = arg[0].upper()
         except:
             print("Please check arguments again. Format: ")
             print("Stock: q <symbol>")
