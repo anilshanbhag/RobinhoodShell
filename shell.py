@@ -120,7 +120,7 @@ class RobinhoodShell(cmd.Cmd):
         change_pct =  '%.2f' % (change/previous_close * 100.0)
 
         # format
-        change = f"{change:.2f}"
+        change = "{:.2f}".format(change)
 
         # colorize
         change_pct = color_data(change_pct)
@@ -150,13 +150,17 @@ class RobinhoodShell(cmd.Cmd):
             price = market_data[i]['last_trade_price']
             total_equity = float(price) * quantity
             buy_price = float(position['average_buy_price'])
-            p_l = f"{total_equity - (buy_price * quantity):.2f}"
-            total_equity = f"{total_equity:.2f}"
-            buy_price = f"{buy_price:.2f}"
-            day_change = f"{float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close']):.2f}"
-            day_change_q_val = f"{float(quantity) * float(day_change):.2f}"
-            day_change_pct = f"{float(day_change) / float(market_data[i]['previous_close']) * 100:.2f}"
-            price = f"{float(price):.2f}"
+            p_l_numerical = total_equity - (buy_price * quantity)
+            p_l = "{:.2f}".format(p_l_numerical)
+            total_equity = "{:.2f}".format(total_equity)
+            buy_price = "{:.2f}".format(buy_price)
+            day_change_numerical = float(market_data[i]['last_trade_price']) - float(market_data[i]['previous_close'])
+            day_change = "{:.2f}".format(day_change_numerical)
+            day_change_q_val_numerical = float(quantity) * float(day_change_numerical)
+            day_change_q_val = "{:.2f}".format(day_change_q_val_numerical)
+            day_change_pct_numerical = float(day_change_numerical) / float(market_data[i]['previous_close']) * 100
+            day_change_pct = "{:.2f}".format(day_change_pct_numerical)
+            price = "{:.2f}".format(float(price))
 
             table_data.append([
                 symbol,
@@ -217,7 +221,7 @@ class RobinhoodShell(cmd.Cmd):
             day_change = float(info['adjusted_mark_price']) - float(info['previous_close_price'])
             day_pct = '{:04.2f}'.format((day_change / float(info['previous_close_price']) ) * 100)
             # format after calc
-            day_change = f"{day_change:.3f}"
+            day_change = "{:.3f}".format(day_change)
             options_t_data.append([
                 symbol,option_type,
                 expiration,
