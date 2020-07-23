@@ -194,15 +194,24 @@ class Robinhood:
                     self.headers['Authorization'] = 'Bearer ' + self.auth_token
                     return True
 
-                if self.challenge_id == "" and "challenge" in res_data.keys():
-                    self.challenge_id = res_data["challenge"]["id"]
-                self.headers["X-ROBINHOOD-CHALLENGE-RESPONSE-ID"] = self.challenge_id #has to add this to stay logged in
-                sms_challenge_endpoint = "https://api.robinhood.com/challenge/{}/respond/".format(self.challenge_id)
                 print("No 2FA Given")
                 print(challenge_type + " code:")
                 self.sms_code = input()
-                challenge_res = {"response":self.sms_code}
-                res2 = self.session.post(sms_challenge_endpoint, data=challenge_res, timeout=15)
+
+                if self.challenge_id == "" and "mfa_required" in res_data.keys():
+                    # handle MFA required
+                    login_endpoint = endpoints.login()
+                    payload['mfa_code'] = self.sms_code
+                    res2 = self.session.post(login_endpoint, data=payload, timeout=15)
+                
+                elif self.challenge_id == "" and "challenge" in res_data.keys():
+                    # handle challenge required
+                    self.challenge_id = res_data["challenge"]["id"]
+                    self.headers["X-ROBINHOOD-CHALLENGE-RESPONSE-ID"] = self.challenge_id #has to add this to stay logged in
+                    sms_challenge_endpoint = "https://api.robinhood.com/challenge/{}/respond/".format(self.challenge_id)
+                    challenge_res = {"response":self.sms_code}
+                    res2 = self.session.post(sms_challenge_endpoint, data=challenge_res, timeout=15)       
+                
                 res2.raise_for_status()
                 #gets access token for final response to stay logged in
                 res3 = self.session.post(endpoints.login(), data=payload, timeout=15)
