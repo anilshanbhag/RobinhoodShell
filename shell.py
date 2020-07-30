@@ -566,6 +566,8 @@ class RobinhoodShell(cmd.Cmd):
         self._save_auth_data()
         return True
 
+    do_EOF = do_bye
+    
     # ------ utils --------
     def get_symbol(self, url):
         if not url in self.instruments_reverse_cache:
@@ -624,4 +626,9 @@ def parse(arg):
     return tuple(map(int, arg.split()))
 
 if __name__ == '__main__':
-    RobinhoodShell().cmdloop()
+    if len(sys.argv)>1:
+        if sys.argv[1]=='-c':
+            RobinhoodShell().onecmd(sys.argv[2])
+            RobinhoodShell().onecmd("bye")
+    else:
+        RobinhoodShell().cmdloop()
